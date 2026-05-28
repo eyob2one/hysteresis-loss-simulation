@@ -3,184 +3,1683 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hysteresis Loss & Core Saturation Simulator</title>
+  <title>MagSim Pro - Symmetrical Hysteresis & Saturation Simulator</title>
 
-  <!-- Tailwind CSS (CDN – switch to local build for production) -->
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Chart.js -->
+  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 
-  <!-- App styles -->
-  <link rel="stylesheet" href="css/styles.css" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 
-  <script>
-    /* Tailwind custom theme tokens */
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: { DEFAULT: '#0ea5e9', dark: '#0369a1' },
-            accent: '#f59e0b',
-          },
-          fontFamily: {
-            mono: ['"JetBrains Mono"', 'monospace'],
-          },
-        },
-      },
-    };
-  </script>
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: #030712;
+      background-image: 
+        radial-gradient(rgba(14, 165, 233, 0.08) 1.5px, transparent 1.5px),
+        radial-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+      background-size: 32px 32px, 16px 16px;
+      background-position: 0 0, 8px 8px;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Scrollbars styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #030712;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+      border: 2px solid #030712;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+
+    /* Premium Glassmorphic Card */
+    .glass-card {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(16px) saturate(120%);
+      -webkit-backdrop-filter: blur(16px) saturate(120%);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(14, 165, 233, 0.2);
+      box-shadow: 0 12px 40px -12px rgba(14, 165, 233, 0.15);
+    }
+
+    /* Slider Styling */
+    .slider-track-glow {
+      box-shadow: 0 0 12px rgba(14, 165, 233, 0.2);
+    }
+    .custom-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 9999px;
+      outline: none;
+      transition: background 0.2s ease;
+    }
+    .custom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1.5px solid #0f172a;
+    }
+    .custom-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.9), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    }
+
+    /* Tab styles */
+    .mode-tab-active {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(99, 102, 241, 0.15));
+      border-color: rgba(14, 165, 233, 0.6);
+      color: #38bdf8;
+      box-shadow: 0 0 15px -3px rgba(14, 165, 233, 0.2);
+    }
+
+    /* Glow Elements */
+    .neon-glow-cyan {
+      box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
+    }
+    .neon-text-glow-cyan {
+      text-shadow: 0 0 12px rgba(14, 165, 233, 0.4);
+    }
+
+    /* Interactive animations */
+    .animate-spin-slow {
+      animation: spin 8s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    .pulse-glow-status {
+      animation: pulseGlow 2s infinite alternate;
+    }
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 4px rgba(52, 211, 153, 0.2); }
+      100% { box-shadow: 0 0 14px rgba(52, 211, 153, 0.6); }
+    }
+  </style>
 </head>
-
-<body class="min-h-full bg-gray-950 text-gray-100 font-sans antialiased">
+<body class="min-h-full text-slate-100 selection:bg-sky-500 selection:text-white pb-12">
 
   <!-- ── Header ─────────────────────────────────────────────────────────── -->
-  <header class="border-b border-gray-800 bg-gray-900/80 backdrop-blur sticky top-0 z-50">
+  <header class="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <!-- Electromagnet icon (inline SVG) -->
-        <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M3.75 13.5A8.25 8.25 0 0112 5.25a8.25 8.25 0 018.25 8.25M3.75 13.5h16.5M3.75 13.5
-               C3.75 17.642 7.358 21 12 21s8.25-3.358 8.25-7.5"/>
-        </svg>
-        <span class="text-xl font-semibold tracking-tight">MagSim <span class="text-brand">Pro</span></span>
+      <div class="flex items-center gap-4">
+        <!-- Electromagnet Coil SVG Icon -->
+        <div class="p-3 bg-sky-950/40 border border-sky-500/30 rounded-2xl shadow-lg relative overflow-hidden group">
+          <div class="absolute inset-0 bg-gradient-to-tr from-sky-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <svg class="w-8 h-8 text-sky-400 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-sky-400 via-sky-200 to-indigo-400 bg-clip-text text-transparent">
+            MagSim <span class="font-light text-slate-400">Pro</span>
+          </h1>
+          <p class="text-xs text-slate-500 font-semibold tracking-wider uppercase mt-0.5">Interactive Electromagnetic Core Lab</p>
+        </div>
       </div>
 
-      <!-- API status badge -->
-      <div class="flex items-center gap-2">
-        <span id="api-status-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-gray-600 transition-colors"></span>
-        <span id="api-status-label" class="text-sm text-gray-400">Checking API…</span>
+      <!-- Sync Status Badge -->
+      <div class="flex items-center gap-3">
+        <div class="px-4 py-2 rounded-2xl border border-slate-800/80 bg-slate-900/40 flex items-center gap-3 shadow-inner">
+          <span id="api-status-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-yellow-500 transition-colors duration-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]"></span>
+          <span id="api-status-label" class="text-xs font-bold text-slate-400 tracking-wider uppercase">Checking Sync…</span>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- ── Main layout ────────────────────────────────────────────────────── -->
-  <main class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- ── Main Layout ────────────────────────────────────────────────────── -->
+  <main class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-    <!-- ── Left panel: Controls ──────────────────────────────────────────── -->
-    <aside class="lg:col-span-1 space-y-5">
+    <!-- ── Left Column: Controls (1/3 width) ──────────────────────────────── -->
+    <aside class="lg:col-span-1 space-y-6">
 
-      <!-- Simulation mode selector -->
-      <section class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">
-          Simulation Mode
+      <!-- Preset Selector -->
+      <section class="glass-card rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-24 h-24 bg-sky-500/5 rounded-full blur-2xl pointer-events-none"></div>
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <svg class="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+          Material Preset
         </h2>
-        <div class="flex flex-col gap-2" id="mode-selector">
-          <label class="mode-btn active" data-mode="steinmetz">
-            <input type="radio" name="sim-mode" value="steinmetz" class="sr-only" checked />
-            <span class="mode-label">Steinmetz Core Loss</span>
-          </label>
-          <label class="mode-btn" data-mode="bertotti">
-            <input type="radio" name="sim-mode" value="bertotti" class="sr-only" />
-            <span class="mode-label">Bertotti Loss Separation</span>
-          </label>
-          <label class="mode-btn" data-mode="bh-curve">
-            <input type="radio" name="sim-mode" value="bh-curve" class="sr-only" />
-            <span class="mode-label">BH Curve Analyser</span>
-          </label>
-          <label class="mode-btn" data-mode="hysteresis">
-            <input type="radio" name="sim-mode" value="hysteresis" class="sr-only" />
-            <span class="mode-label">Hysteresis Loop</span>
-          </label>
+        <div class="relative">
+          <select id="preset-selector" class="w-full bg-slate-900/90 border border-slate-800 rounded-2xl py-3.5 px-4 text-sm text-slate-200 font-bold focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer appearance-none shadow-lg">
+            <option value="silicon_steel" selected>Silicon Steel (M4 - Power Transformers)</option>
+            <option value="soft_ferrite">Soft Ferrite (3C90 - HF Inductor)</option>
+            <option value="hard_magnetic">Hard Magnetic (Alnico V - Permanent Magnet)</option>
+            <option value="custom">Custom Material (Adjustable)</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-sky-400">
+            <svg class="fill-current h-4.5 w-4.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+          </div>
         </div>
       </section>
 
-      <!-- Dynamic parameter form (rendered by app.js) -->
-      <section class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">
-          Parameters
+      <!-- Simulation Mode Selector -->
+      <section class="glass-card rounded-3xl p-6 shadow-2xl">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <svg class="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          Lab Mode
         </h2>
-        <div id="param-form" class="space-y-4"></div>
-
-        <button
-          id="run-btn"
-          class="mt-5 w-full bg-brand hover:bg-brand-dark active:scale-95 transition
-                 text-white text-sm font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-sky-900/40">
-          Run Simulation
-        </button>
+        <div class="grid grid-cols-2 gap-3" id="mode-selector">
+          <button data-mode="dc-mag" class="mode-tab py-3 px-3 rounded-2xl border border-slate-800 text-xs font-bold tracking-widest uppercase transition-all duration-300 text-slate-400 hover:text-slate-200">
+            DC Saturation
+          </button>
+          <button data-mode="ac-loop" class="mode-tab py-3 px-3 rounded-2xl border border-slate-800 text-xs font-bold tracking-widest uppercase transition-all duration-300 mode-tab-active">
+            AC Loop
+          </button>
+          <button data-mode="fit-tab" class="mode-tab py-3 px-3 rounded-2xl border border-slate-800 text-xs font-bold tracking-widest uppercase transition-all duration-300 text-slate-400 hover:text-slate-200 col-span-2">
+            Dynamic Steinmetz Regression
+          </button>
+        </div>
       </section>
 
-      <!-- CSV Upload (BH Data) -->
-      <section class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">
-          Upload BH Data (CSV)
+      <!-- Dynamic Control Sliders -->
+      <section class="glass-card rounded-3xl p-6 shadow-2xl space-y-6 relative overflow-hidden">
+        <div class="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none"></div>
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+          <svg class="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+          Operational Parameters
         </h2>
-        <p class="text-xs text-gray-500 mb-3">Columns required: <code class="text-accent">H_A_per_m</code>, <code class="text-accent">B_Tesla</code></p>
-        <input
-          type="file"
-          id="csv-upload"
-          accept=".csv"
-          class="w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg
-                 file:border-0 file:text-sm file:font-medium file:bg-sky-900/60 file:text-sky-300
-                 hover:file:bg-sky-800/60 cursor-pointer" />
-        <button
-          id="upload-btn"
-          class="mt-3 w-full border border-sky-700 text-sky-300 hover:bg-sky-900/40
-                 text-sm font-medium py-2 px-4 rounded-lg transition">
-          Upload &amp; Analyse
-        </button>
+
+        <!-- Slider 1: H_max -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-bold tracking-wide">
+            <span class="text-slate-300">Peak Magnetisation Force (H<sub>max</sub>)</span>
+            <span class="mono text-sky-400 neon-text-glow-cyan"><span id="val-h_max">2500</span> A/m</span>
+          </div>
+          <input type="range" id="input-h_max" class="custom-slider" min="10" max="10000" step="10" value="2500" />
+        </div>
+
+        <!-- Slider 2: f -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-bold tracking-wide">
+            <span class="text-slate-300">Alternating Frequency (f)</span>
+            <span class="mono text-sky-400 neon-text-glow-cyan"><span id="val-f">50</span> Hz</span>
+          </div>
+          <input type="range" id="input-f" class="custom-slider" min="10" max="100000" step="10" value="50" />
+        </div>
+
+        <!-- Slider 3: N -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-bold tracking-wide">
+            <span class="text-slate-300">Winding Turns (N)</span>
+            <span class="mono text-sky-400 neon-text-glow-cyan"><span id="val-n">200</span> turns</span>
+          </div>
+          <input type="range" id="input-n" class="custom-slider" min="10" max="2000" step="10" value="200" />
+        </div>
+
+        <!-- Slider 4: A_c -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-bold tracking-wide">
+            <span class="text-slate-300">Core Cross Area (A<sub>c</sub>)</span>
+            <span class="mono text-sky-400 neon-text-glow-cyan"><span id="val-ac">12.5</span> cm²</span>
+          </div>
+          <input type="range" id="input-ac" class="custom-slider" min="0.5" max="200" step="0.5" value="12.5" />
+        </div>
+
+        <!-- Slider 5: l_m -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-bold tracking-wide">
+            <span class="text-slate-300">Magnetic Path Length (l<sub>m</sub>)</span>
+            <span class="mono text-sky-400 neon-text-glow-cyan"><span id="val-lm">25.0</span> cm</span>
+          </div>
+          <input type="range" id="input-lm" class="custom-slider" min="2" max="150" step="0.5" value="25.0" />
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-slate-900/60 my-2"></div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Intrinsic Material properties</p>
+
+        <!-- Slider 6: B_sat -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-bold tracking-wide">
+            <span class="text-slate-300">Saturation Induction (B<sub>sat</sub>)</span>
+            <span class="mono text-sky-400 neon-text-glow-cyan"><span id="val-b_sat">1.80</span> T</span>
+          </div>
+          <input type="range" id="input-b_sat" class="custom-slider" min="0.1" max="3.0" step="0.05" value="1.80" />
+        </div>
+
+        <!-- Slider 7: H_c -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-bold tracking-wide">
+            <span class="text-slate-300">Coercive Force (H<sub>c</sub>)</span>
+            <span class="mono text-sky-400 neon-text-glow-cyan"><span id="val-coercivity_h">50</span> A/m</span>
+          </div>
+          <input type="range" id="input-coercivity_h" class="custom-slider" min="5" max="60000" step="5" value="50" />
+        </div>
+
+        <!-- Slider 8: B_r -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-bold tracking-wide">
+            <span class="text-slate-300">Remanence (B<sub>r</sub>)</span>
+            <span class="mono text-sky-400 neon-text-glow-cyan"><span id="val-remanence_b">1.20</span> T</span>
+          </div>
+          <input type="range" id="input-remanence_b" class="custom-slider" min="0.05" max="2.8" step="0.05" value="1.20" />
+        </div>
+      </section>
+
+      <!-- Optional CSV Overrides -->
+      <section class="glass-card rounded-3xl p-6 shadow-2xl">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <svg class="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          Experimental Ingestion
+        </h2>
+        <div class="flex items-center gap-3 bg-slate-900/60 border border-slate-800 rounded-2xl p-3 cursor-pointer hover:border-slate-700 hover:bg-slate-900 transition-all duration-300">
+          <input type="file" id="csv-upload" accept=".csv" class="hidden" />
+          <label for="csv-upload" class="flex items-center gap-4 w-full cursor-pointer">
+            <span class="p-3 bg-sky-950/60 rounded-xl text-sky-400 border border-sky-800/40 shadow-inner">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </span>
+            <div class="text-left">
+              <p class="text-xs font-bold text-slate-200" id="upload-name">Choose H-B CSV file...</p>
+              <p class="text-[10px] text-slate-500 mt-0.5">Format: H_A_per_m, B_Tesla</p>
+            </div>
+          </label>
+        </div>
       </section>
     </aside>
 
-    <!-- ── Right panel: Charts & results ──────────────────────────────────── -->
-    <section class="lg:col-span-2 space-y-5">
+    <!-- ── Right Column: Graphs, Visualization & Analytics (2/3 width) ────── -->
+    <section class="lg:col-span-2 space-y-6">
 
-      <!-- Primary chart -->
-      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+      <!-- Visualizer Graph Card -->
+      <div class="glass-card rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-400 via-indigo-500 to-sky-400"></div>
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold" id="chart-title">Simulation Chart</h2>
-          <button
-            id="export-btn"
-            class="text-xs text-gray-500 hover:text-gray-300 border border-gray-700
-                   hover:border-gray-500 rounded px-3 py-1 transition">
-            Export PNG
-          </button>
-        </div>
-        <div class="relative h-80">
-          <canvas id="main-chart"></canvas>
-          <div id="chart-placeholder"
-               class="absolute inset-0 flex items-center justify-center text-gray-600 text-sm">
-            Run a simulation to see results.
+          <div>
+            <h2 class="text-lg font-bold text-slate-200" id="chart-title">B-H Characterization</h2>
+            <p class="text-xs text-sky-400 font-bold tracking-wider uppercase mt-0.5" id="chart-subtitle">DC Saturation Fitting</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="play-cycle-btn" class="hidden text-xs font-bold px-4 py-2 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-400 hover:bg-sky-500/20 hover:border-sky-500 transition-all duration-300 flex items-center gap-2 shadow-sm">
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <span>Play AC Cycle</span>
+            </button>
+            <button id="export-png-btn" class="text-xs font-semibold px-4 py-2 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-900/40 text-slate-400 hover:text-slate-200 transition-all duration-300">
+              Export Image
+            </button>
           </div>
         </div>
-      </div>
-
-      <!-- Results table -->
-      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">
-          Computed Results
-        </h2>
-        <div id="results-output"
-             class="font-mono text-sm text-gray-300 space-y-1 min-h-[60px]
-                    flex items-center justify-center text-gray-600">
-          Results will appear here.
+        <div class="relative h-96 w-full mt-2">
+          <canvas id="main-chart"></canvas>
         </div>
       </div>
 
-      <!-- Loss breakdown bar chart (Bertotti only) -->
-      <div id="breakdown-panel" class="bg-gray-900 rounded-xl border border-gray-800 p-5 hidden">
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">
-          Loss Breakdown
-        </h2>
-        <div class="relative h-48">
-          <canvas id="breakdown-chart"></canvas>
+      <!-- Real-time Metrics Dashboard -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="metrics-panel">
+        
+        <!-- Metric 1: B_max -->
+        <div class="glass-card rounded-2xl p-4 shadow-xl border-l-4 border-sky-500 relative">
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Max Induction (B<sub>max</sub>)</p>
+          <p class="text-3xl font-bold mono text-sky-400 mt-1 neon-text-glow-cyan"><span id="metric-bmax">1.62</span> <span class="text-xs font-bold text-slate-500 uppercase">T</span></p>
+          <p class="text-[10px] text-slate-400 mt-1.5 font-medium border-t border-slate-900 pt-1.5">B-field limit at H<sub>max</sub></p>
+        </div>
+
+        <!-- Metric 2: knee point / coercivity -->
+        <div class="glass-card rounded-2xl p-4 shadow-xl border-l-4 border-yellow-500" id="metric-card-2">
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" id="metric-title-2">Knee Threshold</p>
+          <p class="text-3xl font-bold mono text-yellow-400 mt-1"><span id="metric-val-2">450</span> <span class="text-xs font-bold text-slate-500 uppercase" id="metric-unit-2">A/m</span></p>
+          <p class="text-[10px] text-slate-400 mt-1.5 font-medium border-t border-slate-900 pt-1.5" id="metric-desc-2">Saturation boundary</p>
+        </div>
+
+        <!-- Metric 3: Remanence -->
+        <div class="glass-card rounded-2xl p-4 shadow-xl border-l-4 border-emerald-500">
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Remanence (B<sub>r</sub>)</p>
+          <p class="text-3xl font-bold mono text-emerald-400 mt-1"><span id="metric-br">1.20</span> <span class="text-xs font-bold text-slate-500 uppercase">T</span></p>
+          <p class="text-[10px] text-slate-400 mt-1.5 font-medium border-t border-slate-900 pt-1.5">Residual magnetism</p>
+        </div>
+
+        <!-- Metric 4: Loss -->
+        <div class="glass-card rounded-2xl p-4 shadow-xl border-l-4 border-red-500">
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Loss Per Cycle (W<sub>h</sub>)</p>
+          <p class="text-3xl font-bold mono text-red-400 mt-1"><span id="metric-loss">240</span> <span class="text-xs font-bold text-slate-500 uppercase">J/m³</span></p>
+          <p class="text-[10px] text-slate-400 mt-1.5 font-medium border-t border-slate-900 pt-1.5">Energy dissipated/cycle</p>
         </div>
       </div>
+
+      <!-- Extended Classroom Panel: Region Classification & Bertotti Breakdown -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Real-time Core Domain Alignment Visualizer (Interactive Canvas) -->
+        <div class="glass-card rounded-3xl p-6 shadow-2xl flex flex-col justify-between" id="visualizer-canvas-panel">
+          <div>
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Core Domain Micro-Structure</h3>
+              <span id="visualizer-mode-badge" class="px-2 py-0.5 rounded-lg border border-slate-800 font-mono text-[9px] text-slate-400 uppercase">Dynamic Vector</span>
+            </div>
+            <div class="relative h-44 bg-slate-950/80 rounded-2xl border border-slate-900 flex items-center justify-center overflow-hidden">
+              <canvas id="core-domains-canvas" class="w-full h-full"></canvas>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-900 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+            <span>Arrow matches local magnetic dipoles</span>
+            <span class="mono text-sky-400" id="visualizer-angle-readout">Domain Alignment: 0%</span>
+          </div>
+        </div>
+
+        <!-- Physical Operation Region Classification -->
+        <div class="glass-card rounded-3xl p-6 shadow-2xl flex flex-col justify-between" id="classification-panel">
+          <div>
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Core Magnetic Regime</h3>
+            <div class="flex items-center gap-3">
+              <span id="region-badge" class="px-3.5 py-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 font-bold text-xs uppercase tracking-wide">
+                Normal (Linear)
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-4 leading-relaxed" id="region-explanation">
+              The core operates in its high-permeability linear zone. Flux density increases proportionally with magnetic force. Efficiency is optimal.
+            </p>
+          </div>
+          <div class="mt-6 pt-3 border-t border-slate-900 flex items-center justify-between text-[11px] text-slate-500 font-semibold tracking-wide">
+            <span>Formula: coth(x) - 1/x [Langevin]</span>
+            <span class="mono">μ_r at knee: <span id="metric-muknee">2500</span></span>
+          </div>
+        </div>
+
+        <!-- AC Symmetrical Loss Breakdown (Bertotti components) -->
+        <div class="glass-card rounded-3xl p-6 shadow-2xl flex flex-col justify-between hidden" id="loss-breakdown-panel">
+          <div>
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Separated Loss Components</h3>
+            <div class="relative h-36 w-full">
+              <canvas id="breakdown-chart"></canvas>
+            </div>
+          </div>
+          <div class="text-[11px] text-slate-500 font-bold uppercase tracking-wider flex justify-between pt-3 border-t border-slate-900 mt-2">
+            <span>Total Core Power: <span class="text-red-400 mono" id="metric-total-power">1.2 kW</span></span>
+            <span>Volume: <span id="metric-volume">150</span> cm³</span>
+          </div>
+        </div>
+
+        <!-- Steinmetz Machine Learning fitting tool (Dynamic tab panel) -->
+        <div class="glass-card rounded-3xl p-6 shadow-2xl col-span-2 hidden animate-fade-in" id="fitting-panel">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-4 mb-4 gap-3">
+            <div>
+              <h3 class="text-base font-bold text-slate-200">ML Coefficient Estimation Pipeline</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Fits experimental core loss densities using a Scikit-Learn Ridge Regression.</p>
+            </div>
+            <button id="run-fit-btn" class="bg-sky-500 hover:bg-sky-600 transition-all font-bold text-xs py-2.5 px-5 rounded-xl text-white shadow-lg shadow-sky-950/40">
+              Run Scikit-Learn Pipeline
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 space-y-3">
+              <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Experimental Loss Dataset</p>
+              <div class="overflow-x-auto max-h-48 border border-slate-900 rounded-2xl bg-slate-950/60 shadow-inner">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-slate-950 text-slate-400 font-bold border-b border-slate-900 sticky top-0">
+                    <tr>
+                      <th class="p-3">#</th>
+                      <th class="p-3">Frequency f (Hz)</th>
+                      <th class="p-3">Induction B_peak (T)</th>
+                      <th class="p-3">Loss Density P (W/m³)</th>
+                      <th class="p-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fit-table-body" class="mono text-slate-300">
+                    <!-- Loaded dynamically -->
+                  </tbody>
+                </table>
+              </div>
+              <div class="flex gap-2 mt-3 bg-slate-900/40 p-2.5 rounded-xl border border-slate-900/50">
+                <input type="number" id="add-f" placeholder="Freq (Hz)" class="bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-sky-500 font-semibold" value="1000" />
+                <input type="number" id="add-b" placeholder="B_peak (T)" class="bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-sky-500 font-semibold" step="0.1" value="1.0" />
+                <input type="number" id="add-p" placeholder="Loss (W/m³)" class="bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-xs w-full focus:outline-none focus:ring-1 focus:ring-sky-500 font-semibold" value="250" />
+                <button id="add-row-btn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition-all duration-300">Add</button>
+              </div>
+            </div>
+            <div class="bg-slate-950 border border-slate-900 rounded-2xl p-5 flex flex-col justify-between shadow-inner">
+              <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Fitted Exponents</p>
+                <div class="space-y-4 mt-2">
+                  <div class="flex justify-between items-center text-xs py-1.5 border-b border-slate-900">
+                    <span class="text-slate-400">Coeff k:</span>
+                    <span class="mono font-bold text-emerald-400 text-sm" id="fit-k">Pending...</span>
+                  </div>
+                  <div class="flex justify-between items-center text-xs py-1.5 border-b border-slate-900">
+                    <span class="text-slate-400">Exponent α (f):</span>
+                    <span class="mono font-bold text-emerald-400 text-sm" id="fit-alpha">Pending...</span>
+                  </div>
+                  <div class="flex justify-between items-center text-xs py-1.5 border-b border-slate-900">
+                    <span class="text-slate-400">Exponent β (B):</span>
+                    <span class="mono font-bold text-emerald-400 text-sm" id="fit-beta">Pending...</span>
+                  </div>
+                </div>
+              </div>
+              <p class="text-[10px] text-slate-500 leading-relaxed mt-5">
+                Solves linearized OLS Ridge: <br/>
+                <code class="text-sky-400 block mt-1 font-semibold">log(P) = log(k) + α log(f) + β log(B)</code>
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
     </section>
   </main>
 
-  <!-- ── Toast notification ────────────────────────────────────────────── -->
-  <div id="toast"
-       class="fixed bottom-6 right-6 z-50 max-w-xs bg-red-900 border border-red-700
-              text-red-100 text-sm px-4 py-3 rounded-xl shadow-xl
-              opacity-0 translate-y-2 transition-all duration-300 pointer-events-none">
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 max-w-xs bg-red-900/90 border border-red-700 text-red-100 text-xs font-bold tracking-wide uppercase px-4 py-3 rounded-2xl shadow-2xl opacity-0 translate-y-2 transition-all duration-300 pointer-events-none">
     <span id="toast-msg"></span>
   </div>
 
-  <!-- ── JS modules ────────────────────────────────────────────────────── -->
-  <script type="module" src="js/api.js"></script>
-  <script type="module" src="js/charts.js"></script>
-  <script type="module" src="js/app.js"></script>
+  <!-- ── Dynamic Simulator JS Engine ────────────────────────────────────── -->
+  <script>
+    // 🧮 PHYSICS MATHEMATICAL CORE (JavaScript Dynamic Fallback Engine)
+    const PhysicsEngine = {
+      langevin: (h, bSat, a) => {
+        if (Math.abs(h) < 1e-8) h = 1e-8;
+        const x = h / a;
+        const coth = 1 / Math.tanh(Math.min(Math.max(x, -100), 100));
+        const L = Math.abs(x) < 1e-4 ? x / 3.0 : coth - 1.0 / x;
+        return bSat * L;
+      },
+
+      findKneePoint: (h, b) => {
+        const hMin = Math.min(...h), hMax = Math.max(...h);
+        const bMin = Math.min(...b), bMax = Math.max(...b);
+        const hRange = hMax - hMin || 1;
+        const bRange = bMax - bMin || 1;
+        const hn = h.map(x => (x - hMin) / hRange);
+        const bn = b.map(x => (x - bMin) / bRange);
+        
+        let maxCurvature = -1;
+        let kneeIdx = 1;
+        
+        for (let i = 1; i < hn.length - 1; i++) {
+          const x1 = hn[i-1], y1 = bn[i-1];
+          const x2 = hn[i], y2 = bn[i];
+          const x3 = hn[i+1], y3 = bn[i+1];
+          const num = Math.abs((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1));
+          const den = Math.sqrt(
+            ((x2 - x1)**2 + (y2 - y1)**2) *
+            ((x3 - x1)**2 + (y3 - y1)**2) *
+            ((x3 - x2)**2 + (y3 - y2)**2)
+          ) + 1e-12;
+          const curv = num / den;
+          if (curv > maxCurvature) {
+            maxCurvature = curv;
+            kneeIdx = i;
+          }
+        }
+        return { index: kneeIdx, h: h[kneeIdx], b: b[kneeIdx] };
+      },
+
+      generateHysteresisLoop: (hMax, bSat, Hc, Br, nPoints = 200) => {
+        const h = [];
+        const step = (2 * hMax) / (nPoints - 1);
+        for (let i = 0; i < nPoints; i++) {
+          h.push(-hMax + i * step);
+        }
+
+        // Dynamic minor loop scaling:
+        // At low H_max, this produces a minor loop (small ellipse near origin)
+        // At high H_max, expands into a full major loop with saturation tails
+        const bPk = bSat * Math.tanh(hMax / (Hc * 1.5 + 1e-12));
+        const ratioPkSat = bSat > 0 ? bPk / bSat : 0;
+        let remanenceEff = Br * ratioPkSat;
+        const coercivityEff = Hc * Math.tanh(hMax / (Hc + 1e-12));
+        
+        remanenceEff = Math.min(remanenceEff, bPk * 0.999);
+        if (remanenceEff <= 0) remanenceEff = bPk * 0.5;
+
+        const ratio = Math.min(remanenceEff / (bPk + 1e-12), 0.999);
+        const arctanh = 0.5 * Math.log((1 + ratio) / (1 - ratio));
+        let s = coercivityEff / arctanh;
+        if (s <= 0 || !isFinite(s)) s = coercivityEff > 0 ? coercivityEff : 1;
+
+        // Upper branch: H sweeps from -Hmax to +Hmax at decreasing field (top of loop)
+        // Lower branch: H sweeps from -Hmax to +Hmax at increasing field (bottom of loop)
+        // Both curves go from Q3 (bottom-left) to Q1 (top-right) and together form the closed loop
+        const b_upper = h.map(hv => bPk * Math.tanh((hv + coercivityEff) / s));
+        const b_lower = h.map(hv => bPk * Math.tanh((hv - coercivityEff) / s));
+        return { h, b_upper, b_lower };
+      },
+
+      calculateArea: (h, bUpper, bLower) => {
+        let area = 0;
+        for (let i = 0; i < h.length - 1; i++) {
+          const dh = h[i+1] - h[i];
+          const dy = (bUpper[i] - bLower[i] + bUpper[i+1] - bLower[i+1]) / 2;
+          area += dy * dh;
+        }
+        return Math.abs(area);
+      },
+
+      fitSteinmetz: (points) => {
+        const N = points.length;
+        if (N < 3) return null;
+        
+        const A = [];
+        const y = [];
+        for (let i = 0; i < N; i++) {
+          A.push([1, Math.log(points[i].f), Math.log(points[i].b)]);
+          y.push(Math.log(points[i].p));
+        }
+
+        const ATA = [
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0]
+        ];
+        const ATy = [0, 0, 0];
+
+        for (let i = 0; i < N; i++) {
+          const row = A[i];
+          const valY = y[i];
+          for (let j = 0; j < 3; j++) {
+            for (let k = 0; k < 3; k++) {
+              ATA[j][k] += row[j] * row[k];
+            }
+            ATy[j] += row[j] * valY;
+          }
+        }
+
+        const lambda = 1e-4;
+        ATA[0][0] += lambda;
+        ATA[1][1] += lambda;
+        ATA[2][2] += lambda;
+
+        function det3x3(m) {
+          return m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) -
+                 m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                 m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+        }
+
+        const D = det3x3(ATA);
+        if (Math.abs(D) < 1e-12) return null;
+
+        function replaceCol(matrix, colIdx, colVal) {
+          const res = matrix.map(r => [...r]);
+          for (let i = 0; i < 3; i++) {
+            res[i][colIdx] = colVal[i];
+          }
+          return res;
+        }
+
+        const D0 = det3x3(replaceCol(ATA, 0, ATy));
+        const D1 = det3x3(replaceCol(ATA, 1, ATy));
+        const D2 = det3x3(replaceCol(ATA, 2, ATy));
+
+        const log_k = D0 / D;
+        const alpha = D1 / D;
+        const beta = D2 / D;
+
+        return {
+          k: Math.exp(log_k),
+          alpha: alpha,
+          beta: beta
+        };
+      }
+    };
+
+    // ─── STATE MANAGEMENT ────────────────────────────────────────────────────
+    const API_BASE = "http://127.0.0.1:8000/api/v1";
+    let isBackendOnline = false;
+    let activeMode = "ac-loop";
+    let mainChart = null;
+    let breakdownChart = null;
+    
+    // Core Domains Anim State
+    let animFrameId = null;
+    let isAnimatingLoop = false;
+    let animationPhase = 0; // Alternating phase variable
+
+    // Presets mapping
+    const PRESETS = {
+      silicon_steel: {
+        name: "Silicon Steel (M4)",
+        b_sat: 1.80,
+        coercivity_h: 50.0,
+        remanence_b: 1.20,
+        k: 0.015,
+        alpha: 1.7,
+        beta: 2.0,
+        k_h: 0.012,
+        k_e: 1.5e-5,
+        k_ex: 8e-5
+      },
+      soft_ferrite: {
+        name: "Soft Ferrite (3C90)",
+        b_sat: 0.40,
+        coercivity_h: 15.0,
+        remanence_b: 0.25,
+        k: 0.0012,
+        alpha: 1.6,
+        beta: 2.4,
+        k_h: 0.0008,
+        k_e: 2e-7,
+        k_ex: 5e-6
+      },
+      hard_magnetic: {
+        name: "Hard Magnetic (Alnico V)",
+        b_sat: 1.35,
+        coercivity_h: 40000.0,
+        remanence_b: 1.10,
+        k: 0.18,
+        alpha: 1.5,
+        beta: 1.8,
+        k_h: 0.15,
+        k_e: 8e-5,
+        k_ex: 3e-4
+      }
+    };
+
+    // Initial training data
+    let trainingData = [
+      { f: 50, b: 0.5, p: 25 },
+      { f: 50, b: 1.0, p: 110 },
+      { f: 50, b: 1.5, p: 260 },
+      { f: 400, b: 0.5, p: 350 },
+      { f: 400, b: 1.0, p: 1500 },
+      { f: 400, b: 1.5, p: 3800 },
+      { f: 1000, b: 0.5, p: 1200 },
+      { f: 1000, b: 1.0, p: 5100 },
+      { f: 1000, b: 1.5, p: 13000 }
+    ];
+
+    const $ = id => document.getElementById(id);
+
+    // Toast helper
+    function showToast(msg, isErr = true) {
+      const toast = $("toast");
+      $("toast-msg").textContent = msg;
+      toast.className = toast.className
+        .replace(/bg-\w+-900/, isErr ? "bg-red-900/90" : "bg-emerald-900/90")
+        .replace(/border-\w+-700/, isErr ? "border-red-700" : "border-emerald-700");
+      toast.classList.remove("opacity-0", "translate-y-2");
+      setTimeout(() => toast.classList.add("opacity-0", "translate-y-2"), 4000);
+    }
+
+    // Connection probing
+    async function checkHealth() {
+      try {
+        const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(1200) });
+        setSyncStatus(res.ok);
+      } catch (e) {
+        setSyncStatus(false);
+      }
+    }
+
+    function setSyncStatus(online) {
+      isBackendOnline = online;
+      const dot = $("api-status-dot");
+      const label = $("api-status-label");
+      
+      dot.className = dot.className.replace(/bg-\w+-500/, online ? "bg-emerald-500" : "bg-red-500");
+      
+      if (online) {
+        dot.style.backgroundColor = "#10b981";
+        dot.style.boxShadow = "0 0 12px #10b981";
+        label.textContent = "Sync: Backend Live";
+        label.className = "text-xs font-bold text-emerald-400 tracking-wider uppercase";
+      } else {
+        dot.style.backgroundColor = "#ef4444";
+        dot.style.boxShadow = "0 0 12px #ef4444";
+        label.textContent = "Sync: Offline Fallback";
+        label.className = "text-xs font-bold text-red-400 tracking-wider uppercase";
+      }
+    }
+
+    // Get active params
+    function getParams() {
+      return {
+        h_max: parseFloat($("input-h_max").value),
+        f: parseFloat($("input-f").value),
+        n: parseFloat($("input-n").value),
+        ac: parseFloat($("input-ac").value),
+        lm: parseFloat($("input-lm").value),
+      };
+    }
+
+    // Initialize domain vectors
+    const domainPoints = [];
+    const numDomains = 42;
+    for (let i = 0; i < numDomains; i++) {
+      domainPoints.push({
+        x: 40 + Math.random() * 240,
+        y: 30 + Math.random() * 120,
+        baseAngle: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.02 + Math.random() * 0.05
+      });
+    }
+
+    // Render Magnetic Domains on Canvas
+    function drawDomains(hFraction) {
+      const canvas = $("core-domains-canvas");
+      const ctx = canvas.getContext("2d");
+      
+      // Handle High DPI displays
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      
+      // Draw background torus outline (core cross section)
+      ctx.strokeStyle = "rgba(30, 41, 59, 0.4)";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(20, 15, rect.width - 40, rect.height - 30);
+
+      // Render domain vectors
+      domainPoints.forEach((p, idx) => {
+        // Target angle based on magnetisation fraction (-1 to 1)
+        // If hFraction is 0, vector remains highly randomized (baseAngle)
+        let targetAngle = p.baseAngle;
+        
+        if (Math.abs(hFraction) > 0.05) {
+          // Rotate towards 0 (clockwise/right) or PI (counter-clockwise/left)
+          const alignmentAngle = hFraction > 0 ? 0 : Math.PI;
+          const blend = Math.min(Math.abs(hFraction) * 1.5, 1.0); // fully aligned at fraction = 0.67
+          
+          // Interpolate angle
+          targetAngle = p.baseAngle * (1 - blend) + alignmentAngle * blend;
+        }
+
+        // Add subtle animation wobble
+        const wobble = Math.sin(Date.now() * p.wobbleSpeed + idx) * 0.12 * (1 - Math.abs(hFraction));
+        const finalAngle = targetAngle + wobble;
+
+        // Render domain arrow
+        const len = 14;
+        const dx = Math.cos(finalAngle) * len;
+        const dy = Math.sin(finalAngle) * len;
+
+        ctx.strokeStyle = hFraction > 0 ? "rgba(14, 165, 233, 0.7)" : hFraction < 0 ? "rgba(249, 115, 22, 0.7)" : "rgba(100, 116, 139, 0.4)";
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+
+        const startX = p.x - dx / 2;
+        const startY = p.y - dy / 2;
+        const endX = p.x + dx / 2;
+        const endY = p.y + dy / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        // Arrow head
+        const angle = Math.atan2(endY - startY, endX - startX);
+        ctx.fillStyle = hFraction > 0 ? "#38bdf8" : hFraction < 0 ? "#f97316" : "#64748b";
+        ctx.beginPath();
+        ctx.moveTo(endX, endY);
+        ctx.lineTo(endX - 5 * Math.cos(angle - Math.PI / 6), endY - 5 * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(endX - 5 * Math.cos(angle + Math.PI / 6), endY - 5 * Math.sin(angle + Math.PI / 6));
+        ctx.fill();
+      });
+
+      // Update text readout
+      $("visualizer-angle-readout").textContent = `Domain Alignment: ${Math.round(Math.abs(hFraction) * 100)}%`;
+    }
+
+    // Set Slider Event Listeners
+    const allSliders = ["h_max", "f", "n", "ac", "lm", "b_sat", "coercivity_h", "remanence_b"];
+    allSliders.forEach(key => {
+      const input = $(`input-${key}`);
+      const valLabel = $(`val-${key}`);
+      input.addEventListener("input", () => {
+        if (key === "b_sat" || key === "remanence_b" || key === "coercivity_h") {
+          // If tweaking custom sliders, change preset dropdown to custom
+          $("preset-selector").value = "custom";
+          
+          // Clamp Remanence to be less than B_sat
+          const bSat = parseFloat($("input-b_sat").value);
+          const remInput = $("input-remanence_b");
+          remInput.max = (bSat - 0.05).toFixed(2);
+          if (parseFloat(remInput.value) > bSat - 0.05) {
+            remInput.value = (bSat - 0.05).toFixed(2);
+            $("val-remanence_b").textContent = remInput.value;
+          }
+        }
+        valLabel.textContent = input.value;
+        triggerRecalculate();
+      });
+    });
+
+    // Material Preset changes
+    $("preset-selector").addEventListener("change", (e) => {
+      const selected = e.target.value;
+      if (selected === "custom") return; // Allow manual tweaking without resetting sliders
+      const p = PRESETS[selected];
+      if (!p) return;
+
+      // Adjust limits/sliders dynamically based on material
+      if (selected === "soft_ferrite") {
+        $("input-h_max").max = 500;
+        $("input-h_max").value = 150;
+      } else if (selected === "silicon_steel") {
+        $("input-h_max").max = 10000;
+        $("input-h_max").value = 2500;
+      } else {
+        $("input-h_max").max = 120000;
+        $("input-h_max").value = 60000;
+      }
+      $("val-h_max").textContent = $("input-h_max").value;
+
+      // Sync material property sliders with preset
+      $("input-b_sat").value = p.b_sat;
+      $("val-b_sat").textContent = p.b_sat;
+      $("input-coercivity_h").value = p.coercivity_h;
+      $("val-coercivity_h").textContent = p.coercivity_h;
+      $("input-remanence_b").max = (p.b_sat - 0.05).toFixed(2);
+      $("input-remanence_b").value = p.remanence_b;
+      $("val-remanence_b").textContent = p.remanence_b;
+
+      triggerRecalculate();
+    });
+
+    // Tab switcher
+    document.querySelectorAll(".mode-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".mode-tab").forEach(t => {
+          t.className = "mode-tab py-3 px-3 rounded-2xl border border-slate-800 text-xs font-bold tracking-widest uppercase transition-all duration-300 text-slate-400 hover:text-slate-200";
+        });
+        tab.className = "mode-tab py-3 px-3 rounded-2xl border text-xs font-bold tracking-widest uppercase transition-all duration-300 mode-tab-active";
+        
+        activeMode = tab.dataset.mode;
+        
+        // Reset dynamic elements
+        isAnimatingLoop = false;
+        $("play-cycle-btn").classList.add("hidden");
+        cancelAnimationFrame(animFrameId);
+
+        if (activeMode === "dc-mag") {
+          $("chart-title").textContent = "B-H Saturation Curve";
+          $("chart-subtitle").textContent = "DC Saturation Fitting";
+          $("fitting-panel").classList.add("hidden");
+          $("classification-panel").classList.remove("hidden");
+          $("loss-breakdown-panel").classList.add("hidden");
+          
+          $("metric-card-2").className = "glass-card rounded-2xl p-4 shadow-xl border-l-4 border-yellow-500";
+          $("metric-title-2").textContent = "Knee Threshold";
+          $("metric-unit-2").textContent = "A/m";
+          $("metric-desc-2").textContent = "Saturation boundary";
+        } else if (activeMode === "ac-loop") {
+          $("chart-title").textContent = "AC Symmetrical Hysteresis Loop";
+          $("chart-subtitle").textContent = "AC Loop losses";
+          $("fitting-panel").classList.add("hidden");
+          $("classification-panel").classList.add("hidden");
+          $("loss-breakdown-panel").classList.remove("hidden");
+          $("play-cycle-btn").classList.remove("hidden");
+
+          $("metric-card-2").className = "glass-card rounded-2xl p-4 shadow-xl border-l-4 border-orange-500";
+          $("metric-title-2").textContent = "Coercivity H_c";
+          $("metric-unit-2").textContent = "A/m";
+          $("metric-desc-2").textContent = "Demagnetisation force";
+        } else if (activeMode === "fit-tab") {
+          $("fitting-panel").classList.remove("hidden");
+          $("classification-panel").classList.add("hidden");
+          $("loss-breakdown-panel").classList.add("hidden");
+        }
+        
+        triggerRecalculate();
+      });
+    });
+
+    // Alternating Cycle Player
+    $("play-cycle-btn").addEventListener("click", () => {
+      isAnimatingLoop = !isAnimatingLoop;
+      if (isAnimatingLoop) {
+        $("play-cycle-btn").querySelector("span").textContent = "Pause Cycle";
+        animateACCycle();
+      } else {
+        $("play-cycle-btn").querySelector("span").textContent = "Play AC Cycle";
+        cancelAnimationFrame(animFrameId);
+      }
+    });
+
+    function animateACCycle() {
+      if (!isAnimatingLoop) return;
+      
+      const params = getParams();
+      const bSat = parseFloat($("input-b_sat").value);
+      const coercivityH = parseFloat($("input-coercivity_h").value);
+      const remanenceB = parseFloat($("input-remanence_b").value);
+      
+      // Sweep operating point field intensity sinusoidally
+      animationPhase += 0.035;
+      const H_t = params.h_max * Math.sin(animationPhase);
+      
+      // Generate current B based on loop direction (sign of cosine sweep)
+      const isUpperBranch = Math.cos(animationPhase) < 0;
+      
+      // Apply minor loop dynamic scaling for animation operating point
+      const bPk = bSat * Math.tanh(params.h_max / (coercivityH * 1.5 + 1e-12));
+      const ratioPkSat = bSat > 0 ? bPk / bSat : 0;
+      let remanenceEff = remanenceB * ratioPkSat;
+      const coercivityEff = coercivityH * Math.tanh(params.h_max / (coercivityH + 1e-12));
+      
+      remanenceEff = Math.min(remanenceEff, bPk * 0.999);
+      if (remanenceEff <= 0) remanenceEff = bPk * 0.5;
+
+      const ratio = Math.min(remanenceEff / (bPk + 1e-12), 0.999);
+      const arctanh = 0.5 * Math.log((1 + ratio) / (1 - ratio));
+      let s = coercivityEff / arctanh;
+      if (s <= 0) s = coercivityEff > 0 ? coercivityEff : 1;
+      
+      const shift = isUpperBranch ? coercivityEff : -coercivityEff;
+      const B_t = bPk * Math.tanh((H_t + shift) / s);
+
+      // Draw domain visualizer dynamically aligned with H
+      drawDomains(H_t / params.h_max);
+
+      // Update in-place dot cursor in scatter plot
+      // Dataset index 5 = "Operating Point" in the new 6-dataset layout
+      if (mainChart && mainChart.data.datasets.length >= 6) {
+        mainChart.data.datasets[5].data = [{ x: H_t, y: B_t }];
+        mainChart.update('none'); // Update without full redraw for performance
+      }
+
+      animFrameId = requestAnimationFrame(animateACCycle);
+    }
+
+    // MAIN RECALCULATE ORCHESTRATOR
+    async function triggerRecalculate() {
+      const params = getParams();
+      const presetName = $("preset-selector").value;
+      
+      // Fetch dynamic sliders values
+      const bSat = parseFloat($("input-b_sat").value);
+      const coercivityH = parseFloat($("input-coercivity_h").value);
+      const remanenceB = parseFloat($("input-remanence_b").value);
+
+      // Construct dynamic material object
+      const mat = {
+        name: presetName === "custom" ? "Custom Material" : PRESETS[presetName].name,
+        b_sat: bSat,
+        coercivity_h: coercivityH,
+        remanence_b: remanenceB,
+        k_e: presetName !== "custom" ? PRESETS[presetName].k_e : 1.5e-5,
+        k_ex: presetName !== "custom" ? PRESETS[presetName].k_ex : 8.0e-5
+      };
+
+      if (activeMode === "dc-mag") {
+        const a_langevin = mat.coercivity_h * 2.5; 
+        const h_points = [];
+        const step = params.h_max / 150;
+        for (let i = 0; i <= 150; i++) {
+          h_points.push(i * step);
+        }
+        
+        let b_points = [];
+        let kneePoint = null;
+        let operatingRegion = "";
+        let mu_r_knee = 0;
+        
+        if (isBackendOnline) {
+          try {
+            const response = await fetch(`${API_BASE}/analyse/bh-curve`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                h_values: h_points.filter(v => v > 0),
+                b_values: h_points.filter(v => v > 0).map(h => PhysicsEngine.langevin(h, mat.b_sat, a_langevin)),
+                material_name: mat.name
+              })
+            });
+            const res = await response.json();
+            const analysis = res.analysis;
+            
+            b_points = analysis.b_fitted;
+            kneePoint = {
+              h: analysis.knee_point.knee_H_A_per_m,
+              b: analysis.knee_point.knee_B_Tesla
+            };
+            operatingRegion = analysis.operating_region;
+            mu_r_knee = analysis.mu_r_at_knee;
+          } catch (e) {
+            runDcMagFallback(h_points, mat, a_langevin, params);
+            return;
+          }
+        } else {
+          runDcMagFallback(h_points, mat, a_langevin, params);
+          return;
+        }
+
+        updateDcMagUI(h_points, b_points, kneePoint, mat, params, operatingRegion, mu_r_knee);
+
+      } else if (activeMode === "ac-loop") {
+        let loop = null;
+        let area = 0;
+        
+        if (isBackendOnline) {
+          try {
+            const response = await fetch(`${API_BASE}/analyse/hysteresis-loop`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                h_max: params.h_max,
+                b_sat: mat.b_sat,
+                coercivity_h: mat.coercivity_h,
+                remanence_b: mat.remanence_b,
+                n_points: 200
+              })
+            });
+            const res = await response.json();
+            loop = res.hysteresis_loop;
+            area = res.enclosed_area_J_m3;
+          } catch (e) {
+            runAcLoopFallback(mat, params);
+            return;
+          }
+        } else {
+          runAcLoopFallback(mat, params);
+          return;
+        }
+
+        updateAcLoopUI(loop, area, mat, params);
+      }
+    }
+
+    // Fallbacks
+    function runDcMagFallback(h_points, mat, a_langevin, params) {
+      const b_points = h_points.map(h => PhysicsEngine.langevin(h, mat.b_sat, a_langevin));
+      const kneePoint = PhysicsEngine.findKneePoint(h_points, b_points);
+      
+      let operatingRegion = "Normal (Linear / Elastic)";
+      if (params.h_max > kneePoint.h * 1.3) {
+        operatingRegion = "Saturated (Coercive Limit)";
+      } else if (params.h_max >= kneePoint.h * 0.7) {
+        operatingRegion = "Approaching Saturation (Knee Region)";
+      }
+      
+      const mu_0 = 4.0 * Math.PI * 1e-7;
+      const mu_r_knee = kneePoint.b / (mu_0 * kneePoint.h);
+      
+      updateDcMagUI(h_points, b_points, kneePoint, mat, params, operatingRegion, mu_r_knee);
+    }
+
+    function updateDcMagUI(h_points, b_points, kneePoint, mat, params, operatingRegion, mu_r_knee) {
+      const b_max_actual = b_points[b_points.length - 1];
+
+      // Draw Main Scatter Chart with Glow Effects
+      drawBHCurveChart(h_points, b_points, kneePoint, mat.b_sat);
+
+      // Render Static Domain Visualizer based on max field
+      drawDomains(params.h_max / (params.h_max * 1.05));
+
+      // Fill Metrics
+      $("metric-bmax").textContent = b_max_actual.toFixed(2);
+      $("metric-val-2").textContent = Math.round(kneePoint.h);
+      $("metric-br").textContent = mat.remanence_b.toFixed(2);
+      $("metric-loss").textContent = "---";
+      
+      $("region-badge").textContent = operatingRegion;
+      $("metric-muknee").textContent = Math.round(mu_r_knee);
+
+      if (operatingRegion.includes("Normal")) {
+        $("region-badge").className = "px-3.5 py-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 font-bold text-xs uppercase tracking-wider";
+        $("region-explanation").textContent = "The core resides in the high-permeability linear zone. Inductance is stable, and energy conversion efficiency is maximized for transformers and inductors.";
+      } else if (operatingRegion.includes("Approaching")) {
+        $("region-badge").className = "px-3.5 py-1.5 rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-yellow-400 font-bold text-xs uppercase tracking-wider";
+        $("region-explanation").textContent = "The material enters the knee bend. Permeability is dropping rapidly. Magnetics design here requires strict volume/loss parameters trade-off.";
+      } else {
+        $("region-badge").className = "px-3.5 py-1.5 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 font-bold text-xs uppercase tracking-wider";
+        $("region-explanation").textContent = "Deep magnetic saturation has been reached. Domain alignment is complete. Inductance collapses, causing massive grid currents and transformer winding burnouts.";
+      }
+    }
+
+    function runAcLoopFallback(mat, params) {
+      const loop = PhysicsEngine.generateHysteresisLoop(params.h_max, mat.b_sat, mat.coercivity_h, mat.remanence_b, 300);
+      // b_upper and b_lower are now snake_case keys matching the backend API format
+      const area = PhysicsEngine.calculateArea(loop.h, loop.b_upper, loop.b_lower);
+      updateAcLoopUI(loop, area, mat, params);
+    }
+
+    function updateAcLoopUI(loop, area, mat, params) {
+      const W_hys = area;
+      const W_eddy = mat.k_e * (params.f ** 2) * (mat.b_sat ** 2);
+      const W_excess = mat.k_ex * (params.f ** 1.5) * (mat.b_sat ** 1.5);
+      
+      const totalLossDensity = W_hys * params.f + W_eddy + W_excess;
+
+      const volume_m3 = (params.ac * 1e-4) * (params.lm * 1e-2);
+      const totalPowerLoss_W = totalLossDensity * volume_m3;
+
+      // Render Charts
+      drawHysteresisLoopChart(loop, mat.b_sat);
+      
+      drawLossBreakdownChart({
+        hysteresis: W_hys * params.f,
+        eddy: W_eddy,
+        excess: W_excess
+      });
+
+      // Render domain vector animation frame
+      drawDomains(0.85);
+
+      // Fill Metrics
+      $("metric-bmax").textContent = mat.b_sat.toFixed(2);
+      $("metric-val-2").textContent = Math.round(mat.coercivity_h);
+      $("metric-br").textContent = mat.remanence_b.toFixed(2);
+      $("metric-loss").textContent = Math.round(area);
+
+      $("metric-volume").textContent = (params.ac * params.lm).toFixed(1);
+      $("metric-total-power").textContent = totalPowerLoss_W < 1000 ? 
+        `${totalPowerLoss_W.toFixed(2)} W` : 
+        `${(totalPowerLoss_W / 1000).toFixed(3)} kW`;
+    }
+
+    // 📈 NEON GLOW CHART.JS PLUGINS & DRAWS
+    const glowPlugin = {
+      id: 'shadowGlow',
+      beforeDatasetDraw: (chart, args, options) => {
+        const { ctx } = chart;
+        ctx.save();
+        ctx.shadowColor = 'rgba(56, 189, 248, 0.4)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      },
+      afterDatasetDraw: (chart, args, options) => {
+        chart.ctx.restore();
+      }
+    };
+
+    function drawBHCurveChart(h, b, knee, bSat) {
+      if (mainChart) mainChart.destroy();
+      
+      const ctx = $("main-chart").getContext("2d");
+      const dataPoints = h.map((val, i) => ({ x: val, y: b[i] }));
+      const kneePoint = [{ x: knee.h, y: knee.b }];
+      const maxH = Math.max(...h);
+
+      mainChart = new Chart(ctx, {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              label: "DC Initial Curve",
+              data: dataPoints,
+              borderColor: "#0ea5e9",
+              backgroundColor: "rgba(14, 165, 233, 0.05)",
+              showLine: true,
+              tension: 0.3,
+              borderWidth: 3,
+              pointRadius: 0
+            },
+            {
+              label: "Knee Point",
+              data: kneePoint,
+              borderColor: "#eab308",
+              backgroundColor: "#eab308",
+              pointRadius: 9,
+              pointStyle: "triangle",
+              showLine: false
+            }
+          ]
+        },
+        plugins: [glowPlugin],
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: "#94a3b8", font: { family: "Outfit", size: 12, weight: 'bold' } } },
+            tooltip: {
+              backgroundColor: "#0f172a",
+              borderColor: "#334155",
+              borderWidth: 1.5,
+              callbacks: {
+                label: (c) => `H: ${c.parsed.x.toFixed(1)} A/m, B: ${c.parsed.y.toFixed(3)} T`
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "Magnetic Field Intensity H (A/m)", color: "#94a3b8", font: { weight: 'bold' } },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(30, 41, 59, 0.5)" },
+              min: -maxH,
+              max: maxH
+            },
+            y: {
+              title: { display: true, text: "Magnetic Flux Density B (T)", color: "#94a3b8", font: { weight: 'bold' } },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(30, 41, 59, 0.5)" },
+              min: -bSat * 1.15,
+              max: bSat * 1.15
+            }
+          }
+        }
+      });
+    }
+
+    function drawHysteresisLoopChart(loop, bSat) {
+      if (mainChart) mainChart.destroy();
+      
+      const ctx = $("main-chart").getContext("2d");
+      const maxH = Math.max(...loop.h.map(Math.abs));
+      const n = loop.h.length;
+
+      // Upper branch: left to right (-Hmax → +Hmax), higher B values (top of loop)
+      const upperPoints = loop.h.map((val, i) => ({ x: val, y: loop.b_upper[i] }));
+      
+      // Lower branch: also left to right (-Hmax → +Hmax), lower B values (bottom of loop)
+      const lowerPoints = loop.h.map((val, i) => ({ x: val, y: loop.b_lower[i] }));
+
+      // Closed fill polygon: upper (left→right) + lower reversed (right→left)
+      // This traces the complete loop boundary for filling
+      const closedLoop = [
+        ...upperPoints,
+        ...lowerPoints.slice().reverse()
+      ];
+
+      mainChart = new Chart(ctx, {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              // Filled interior of the loop (energy loss area)
+              label: "Hysteresis Loss Area",
+              data: closedLoop,
+              borderColor: "transparent",
+              backgroundColor: "rgba(56, 189, 248, 0.08)",
+              showLine: true,
+              fill: true,
+              tension: 0.3,
+              borderWidth: 0,
+              pointRadius: 0,
+              order: 3
+            },
+            {
+              // Upper branch: sweeps from top-left (-Hmax, -Bpk) through Q2 remanence (+Br) to top-right (+Hmax, +Bpk)
+              label: "Upper Branch (↓ Decreasing H)",
+              data: upperPoints,
+              borderColor: "#38bdf8",
+              backgroundColor: "transparent",
+              showLine: true,
+              tension: 0.3,
+              borderWidth: 3,
+              pointRadius: 0,
+              order: 1
+            },
+            {
+              // Lower branch: sweeps from bottom-left (-Hmax, -Bpk) through Q4 remanence (-Br) to bottom-right (+Hmax, +Bpk)
+              label: "Lower Branch (↑ Increasing H)",
+              data: lowerPoints,
+              borderColor: "#f97316",
+              backgroundColor: "transparent",
+              showLine: true,
+              tension: 0.3,
+              borderWidth: 3,
+              pointRadius: 0,
+              order: 2
+            },
+            {
+              // Remanence markers: (0, +Br) and (0, -Br)
+              label: "Remanence Points (Br)",
+              data: [
+                { x: 0, y: loop.b_upper[Math.floor(n / 2)] },
+                { x: 0, y: loop.b_lower[Math.floor(n / 2)] }
+              ],
+              borderColor: "#a78bfa",
+              backgroundColor: "#a78bfa",
+              pointRadius: 6,
+              pointStyle: "circle",
+              showLine: false,
+              order: 0
+            },
+            {
+              // Coercivity markers: where each branch crosses B=0
+              label: "Coercivity Points (Hc)",
+              data: (() => {
+                // Find where upper branch crosses 0 (negative H side)
+                const pts = [];
+                for (let i = 1; i < n; i++) {
+                  if (loop.b_upper[i-1] * loop.b_upper[i] <= 0) {
+                    const hCross = loop.h[i-1] - loop.b_upper[i-1] * (loop.h[i] - loop.h[i-1]) / (loop.b_upper[i] - loop.b_upper[i-1]);
+                    pts.push({ x: hCross, y: 0 });
+                    break;
+                  }
+                }
+                // Find where lower branch crosses 0 (positive H side)
+                for (let i = n - 2; i >= 0; i--) {
+                  if (loop.b_lower[i] * loop.b_lower[i+1] <= 0) {
+                    const hCross = loop.h[i] - loop.b_lower[i] * (loop.h[i+1] - loop.h[i]) / (loop.b_lower[i+1] - loop.b_lower[i]);
+                    pts.push({ x: hCross, y: 0 });
+                    break;
+                  }
+                }
+                return pts;
+              })(),
+              borderColor: "#f59e0b",
+              backgroundColor: "#f59e0b",
+              pointRadius: 6,
+              pointStyle: "crossRot",
+              showLine: false,
+              order: 0
+            },
+            {
+              label: "Operating Point",
+              data: [],
+              borderColor: "#ec4899",
+              backgroundColor: "#ec4899",
+              pointRadius: 9,
+              showLine: false,
+              order: 0
+            }
+          ]
+        },
+        plugins: [glowPlugin],
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 200 },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#94a3b8",
+                font: { family: "Outfit", weight: 'bold', size: 11 },
+                filter: (item) => !item.text.includes("Area")
+              }
+            },
+            tooltip: {
+              backgroundColor: "#0f172a",
+              borderColor: "#334155",
+              borderWidth: 1.5,
+              callbacks: {
+                label: (c) => `H: ${c.parsed.x.toFixed(1)} A/m, B: ${c.parsed.y.toFixed(3)} T`
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "Magnetic Field Intensity H (A/m)", color: "#94a3b8", font: { weight: 'bold' } },
+              ticks: {
+                color: "#64748b",
+                callback: (v) => v === 0 ? "0" : v
+              },
+              grid: {
+                color: (ctx) => ctx.tick.value === 0 ? "rgba(148,163,184,0.3)" : "rgba(30,41,59,0.5)",
+                lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1
+              },
+              min: -maxH,
+              max: maxH
+            },
+            y: {
+              title: { display: true, text: "Magnetic Flux Density B (T)", color: "#94a3b8", font: { weight: 'bold' } },
+              ticks: { color: "#64748b" },
+              grid: {
+                color: (ctx) => ctx.tick.value === 0 ? "rgba(148,163,184,0.3)" : "rgba(30,41,59,0.5)",
+                lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1
+              },
+              min: -bSat * 1.15,
+              max: bSat * 1.15
+            }
+          }
+        }
+      });
+    }
+
+    function drawLossBreakdownChart(components) {
+      const ctx = $("breakdown-chart").getContext("2d");
+      if (breakdownChart) breakdownChart.destroy();
+
+      breakdownChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["Hysteresis", "Eddy Current", "Excess Loss"],
+          datasets: [{
+            data: [components.hysteresis, components.eddy, components.excess],
+            backgroundColor: ["rgba(56, 189, 248, 0.8)", "rgba(249, 115, 22, 0.8)", "rgba(168, 85, 247, 0.8)"],
+            borderRadius: 8,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              type: 'logarithmic',
+              title: { display: true, text: "Loss Density (W/m³)", color: "#64748b", font: { size: 10, weight: 'bold' } },
+              ticks: { color: "#64748b" },
+              grid: { color: "rgba(30, 41, 59, 0.4)" }
+            },
+            y: {
+              ticks: { color: "#94a3b8", font: { family: "Outfit", weight: 'semibold' } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    // CSV handler
+    $("csv-upload").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      $("upload-name").textContent = file.name;
+      
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      if (isBackendOnline) {
+        try {
+          const res = await fetch(`${API_BASE}/upload/bh-csv`, {
+            method: "POST",
+            body: formData
+          });
+          const data = await res.json();
+          const analysis = data.analysis;
+          
+          showToast(`Uploaded ${data.rows_parsed} points successfully.`, false);
+          
+          activeMode = "dc-mag";
+          drawBHCurveChart(analysis.h_fitted, analysis.b_fitted, {
+            h: analysis.knee_point.knee_H_A_per_m,
+            b: analysis.knee_point.knee_B_Tesla
+          }, analysis.b_fitted[analysis.b_fitted.length - 1]);
+          
+          updateDcMagUI(analysis.h_fitted, analysis.b_fitted, {
+            h: analysis.knee_point.knee_H_A_per_m,
+            b: analysis.knee_point.knee_B_Tesla
+          }, PRESETS.silicon_steel, getParams(), analysis.operating_region, analysis.mu_r_at_knee);
+
+        } catch (e) {
+          parseCsvOffline(file);
+        }
+      } else {
+        parseCsvOffline(file);
+      }
+    });
+
+    function parseCsvOffline(file) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const text = evt.target.result;
+        const lines = text.split("\n");
+        const hArr = [];
+        const bArr = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(",");
+          if (cols.length >= 2) {
+            const h = parseFloat(cols[0]);
+            const b = parseFloat(cols[1]);
+            if (!isNaN(h) && !isNaN(b)) {
+              hArr.push(h);
+              bArr.push(b);
+            }
+          }
+        }
+
+        if (hArr.length < 3) {
+          showToast("CSV must contain at least 3 rows.");
+          return;
+        }
+
+        showToast(`Parsed offline: ${hArr.length} dataset rows.`, false);
+        const kneePoint = PhysicsEngine.findKneePoint(hArr, bArr);
+        drawBHCurveChart(hArr, bArr, kneePoint, Math.max(...bArr));
+        updateDcMagUI(hArr, bArr, kneePoint, PRESETS.silicon_steel, getParams(), "Approaching Saturation (Offline)", 1250);
+      };
+      reader.readAsText(file);
+    }
+
+    // Machine Learning Exponent Regression
+    function renderFitTable() {
+      const tbody = $("fit-table-body");
+      tbody.innerHTML = "";
+      trainingData.forEach((row, i) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-slate-900/40 hover:bg-slate-900/20";
+        tr.innerHTML = `
+          <td class="p-3 text-slate-500">${i + 1}</td>
+          <td class="p-3">${row.f}</td>
+          <td class="p-3">${row.b.toFixed(2)}</td>
+          <td class="p-3 text-sky-400 font-bold">${row.p.toFixed(1)}</td>
+          <td class="p-3 text-right">
+            <button class="text-red-400 hover:text-red-300 font-semibold" onclick="removeFitRow(${i})">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.removeFitRow = (idx) => {
+      trainingData.splice(idx, 1);
+      renderFitTable();
+    };
+
+    $("add-row-btn").addEventListener("click", () => {
+      const f = parseFloat($("add-f").value);
+      const b = parseFloat($("add-b").value);
+      const p = parseFloat($("add-p").value);
+      
+      if (isNaN(f) || isNaN(b) || isNaN(p) || f <= 0 || b <= 0 || p <= 0) {
+        showToast("Inputs must be positive numbers.");
+        return;
+      }
+      
+      trainingData.push({ f, b, p });
+      renderFitTable();
+    });
+
+    $("run-fit-btn").addEventListener("click", async () => {
+      if (trainingData.length < 3) {
+        showToast("Minimum 3 data points required to fit regression.");
+        return;
+      }
+      
+      if (isBackendOnline) {
+        try {
+          const res = await fetch(`${API_BASE}/fit/steinmetz`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              data_points: trainingData.map(d => ({
+                frequency: d.f,
+                b_peak: d.b,
+                p_loss: d.p
+              }))
+            })
+          });
+          const data = await res.json();
+          
+          $("fit-k").textContent = data.k.toExponential(4);
+          $("fit-alpha").textContent = data.alpha.toFixed(3);
+          $("fit-beta").textContent = data.beta.toFixed(3);
+          showToast("Scikit-Learn fitted successfully!", false);
+          
+        } catch (e) {
+          fitOffline();
+        }
+      } else {
+        fitOffline();
+      }
+    });
+
+    function fitOffline() {
+      const coeffs = PhysicsEngine.fitSteinmetz(trainingData);
+      if (!coeffs) {
+        showToast("Offline fit failed - Determinant singular.");
+        return;
+      }
+      
+      $("fit-k").textContent = coeffs.k.toExponential(4);
+      $("fit-alpha").textContent = coeffs.alpha.toFixed(3);
+      $("fit-beta").textContent = coeffs.beta.toFixed(3);
+      showToast("Offline Ridge fit completed!", false);
+    }
+
+    // Exporter
+    $("export-png-btn").addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.download = `magsim-${activeMode}-${Date.now()}.png`;
+      link.href = $("main-chart").toDataURL("image/png");
+      link.click();
+      showToast("Chart exported successfully.", false);
+    });
+
+    // ─── INITIALIZATION ──────────────────────────────────────────────────────
+    document.addEventListener("DOMContentLoaded", () => {
+      renderFitTable();
+
+      // Initialize UI panels for AC Loop mode (the default active mode)
+      $("chart-title").textContent = "AC Symmetrical Hysteresis Loop";
+      $("chart-subtitle").textContent = "AC Loop losses";
+      $("fitting-panel").classList.add("hidden");
+      $("classification-panel").classList.add("hidden");
+      $("loss-breakdown-panel").classList.remove("hidden");
+      $("play-cycle-btn").classList.remove("hidden");
+      $("metric-card-2").className = "glass-card rounded-2xl p-4 shadow-xl border-l-4 border-orange-500";
+      $("metric-title-2").textContent = "Coercivity H_c";
+      $("metric-unit-2").textContent = "A/m";
+      $("metric-desc-2").textContent = "Demagnetisation force";
+
+      // Sync material sliders to default preset (silicon_steel)
+      const defaultPreset = PRESETS["silicon_steel"];
+      if (defaultPreset) {
+        $("input-b_sat").value = defaultPreset.b_sat;
+        $("val-b_sat").textContent = defaultPreset.b_sat;
+        $("input-coercivity_h").value = defaultPreset.coercivity_h;
+        $("val-coercivity_h").textContent = defaultPreset.coercivity_h;
+        $("input-remanence_b").max = (defaultPreset.b_sat - 0.05).toFixed(2);
+        $("input-remanence_b").value = defaultPreset.remanence_b;
+        $("val-remanence_b").textContent = defaultPreset.remanence_b;
+      }
+
+      // Trigger the initial chart render
+      triggerRecalculate();
+      
+      // Heartbeat checks
+      checkHealth();
+      setInterval(checkHealth, 5000);
+    });
+  </script>
 </body>
 </html>
