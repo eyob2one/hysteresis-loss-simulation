@@ -1,0 +1,10 @@
+{
+  "name": "hysteresis-loss-simulation",
+  "version": "1.0.0",
+  "description": "Run both frontend and backend concurrently",
+  "scripts": {
+    "start:backend": "cd backend && .\\venv\\Scripts\\uvicorn app.main:app --reload",
+    "start:frontend": "npx serve frontend -p 3000",
+    "dev": "npx concurrently \"npm run start:backend\" \"npm run start:frontend\""
+  }
+}
