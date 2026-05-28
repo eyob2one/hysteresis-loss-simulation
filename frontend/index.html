@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hysteresis Loss & Core Saturation Simulator</title>
+
+  <!-- Tailwind CSS (CDN – switch to local build for production) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <script>
+    /* Tailwind custom theme tokens */
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#0ea5e9', dark: '#0369a1' },
+            accent: '#f59e0b',
+          },
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+
+<body class="min-h-full bg-gray-950 text-gray-100 font-sans antialiased">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header class="border-b border-gray-800 bg-gray-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <!-- Electromagnet icon (inline SVG) -->
+        <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3.75 13.5A8.25 8.25 0 0112 5.25a8.25 8.25 0 018.25 8.25M3.75 13.5h16.5M3.75 13.5
+               C3.75 17.642 7.358 21 12 21s8.25-3.358 8.25-7.5"/>
+        </svg>
+        <span class="text-xl font-semibold tracking-tight">MagSim <span class="text-brand">Pro</span></span>
+      </div>
+
+      <!-- API status badge -->
+      <div class="flex items-center gap-2">
+        <span id="api-status-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-gray-600 transition-colors"></span>
+        <span id="api-status-label" class="text-sm text-gray-400">Checking API…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main layout ────────────────────────────────────────────────────── -->
+  <main class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- ── Left panel: Controls ──────────────────────────────────────────── -->
+    <aside class="lg:col-span-1 space-y-5">
+
+      <!-- Simulation mode selector -->
+      <section class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">
+          Simulation Mode
+        </h2>
+        <div class="flex flex-col gap-2" id="mode-selector">
+          <label class="mode-btn active" data-mode="steinmetz">
+            <input type="radio" name="sim-mode" value="steinmetz" class="sr-only" checked />
+            <span class="mode-label">Steinmetz Core Loss</span>
+          </label>
+          <label class="mode-btn" data-mode="bertotti">
+            <input type="radio" name="sim-mode" value="bertotti" class="sr-only" />
+            <span class="mode-label">Bertotti Loss Separation</span>
+          </label>
+          <label class="mode-btn" data-mode="bh-curve">
+            <input type="radio" name="sim-mode" value="bh-curve" class="sr-only" />
+            <span class="mode-label">BH Curve Analyser</span>
+          </label>
+          <label class="mode-btn" data-mode="hysteresis">
+            <input type="radio" name="sim-mode" value="hysteresis" class="sr-only" />
+            <span class="mode-label">Hysteresis Loop</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Dynamic parameter form (rendered by app.js) -->
+      <section class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">
+          Parameters
+        </h2>
+        <div id="param-form" class="space-y-4"></div>
+
+        <button
+          id="run-btn"
+          class="mt-5 w-full bg-brand hover:bg-brand-dark active:scale-95 transition
+                 text-white text-sm font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-sky-900/40">
+          Run Simulation
+        </button>
+      </section>
+
+      <!-- CSV Upload (BH Data) -->
+      <section class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">
+          Upload BH Data (CSV)
+        </h2>
+        <p class="text-xs text-gray-500 mb-3">Columns required: <code class="text-accent">H_A_per_m</code>, <code class="text-accent">B_Tesla</code></p>
+        <input
+          type="file"
+          id="csv-upload"
+          accept=".csv"
+          class="w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg
+                 file:border-0 file:text-sm file:font-medium file:bg-sky-900/60 file:text-sky-300
+                 hover:file:bg-sky-800/60 cursor-pointer" />
+        <button
+          id="upload-btn"
+          class="mt-3 w-full border border-sky-700 text-sky-300 hover:bg-sky-900/40
+                 text-sm font-medium py-2 px-4 rounded-lg transition">
+          Upload &amp; Analyse
+        </button>
+      </section>
+    </aside>
+
+    <!-- ── Right panel: Charts & results ──────────────────────────────────── -->
+    <section class="lg:col-span-2 space-y-5">
+
+      <!-- Primary chart -->
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold" id="chart-title">Simulation Chart</h2>
+          <button
+            id="export-btn"
+            class="text-xs text-gray-500 hover:text-gray-300 border border-gray-700
+                   hover:border-gray-500 rounded px-3 py-1 transition">
+            Export PNG
+          </button>
+        </div>
+        <div class="relative h-80">
+          <canvas id="main-chart"></canvas>
+          <div id="chart-placeholder"
+               class="absolute inset-0 flex items-center justify-center text-gray-600 text-sm">
+            Run a simulation to see results.
+          </div>
+        </div>
+      </div>
+
+      <!-- Results table -->
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">
+          Computed Results
+        </h2>
+        <div id="results-output"
+             class="font-mono text-sm text-gray-300 space-y-1 min-h-[60px]
+                    flex items-center justify-center text-gray-600">
+          Results will appear here.
+        </div>
+      </div>
+
+      <!-- Loss breakdown bar chart (Bertotti only) -->
+      <div id="breakdown-panel" class="bg-gray-900 rounded-xl border border-gray-800 p-5 hidden">
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">
+          Loss Breakdown
+        </h2>
+        <div class="relative h-48">
+          <canvas id="breakdown-chart"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── Toast notification ────────────────────────────────────────────── -->
+  <div id="toast"
+       class="fixed bottom-6 right-6 z-50 max-w-xs bg-red-900 border border-red-700
+              text-red-100 text-sm px-4 py-3 rounded-xl shadow-xl
+              opacity-0 translate-y-2 transition-all duration-300 pointer-events-none">
+    <span id="toast-msg"></span>
+  </div>
+
+  <!-- ── JS modules ────────────────────────────────────────────────────── -->
+  <script type="module" src="js/api.js"></script>
+  <script type="module" src="js/charts.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

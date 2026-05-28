@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_comment": "Feature-lock registry — do NOT modify manually. Use check_locks.py.",
+  "project": "hysteresis-simulation",
+  "version": "1.0.0",
+  "policy": "strict",
+  "roles": {
+    "data-engineer":   { "branch": "feature/data-pipeline",  "email": "" },
+    "ml-engineer":     { "branch": "feature/ml-engine",      "email": "" },
+    "backend-engineer":{ "branch": "feature/api-endpoints",  "email": "" },
+    "frontend-engineer":{ "branch": "feature/ui-charts",     "email": "" }
+  },
+  "locks": {
+    "data-engineer": {
+      "description": "Data ingestion, parsing, schema validation",
+      "owns": [
+        "backend/app/utils/data_parser.py",
+        "backend/app/utils/__init__.py"
+      ],
+      "read_only_access": [
+        "backend/app/models/",
+        "backend/requirements.txt"
+      ]
+    },
+    "ml-engineer": {
+      "description": "Mathematical formulas, ML models, curve fitting",
+      "owns": [
+        "backend/app/models/hysteresis_model.py",
+        "backend/app/models/__init__.py",
+        "backend/app/utils/formulas.py"
+      ],
+      "read_only_access": [
+        "backend/app/utils/data_parser.py",
+        "backend/requirements.txt"
+      ]
+    },
+    "backend-engineer": {
+      "description": "FastAPI routing, middleware, request/response schemas",
+      "owns": [
+        "backend/app/main.py",
+        "backend/app/__init__.py",
+        "backend/app/api/routes.py",
+        "backend/app/api/__init__.py",
+        "backend/requirements.txt"
+      ],
+      "read_only_access": [
+        "backend/app/models/",
+        "backend/app/utils/"
+      ]
+    },
+    "frontend-engineer": {
+      "description": "UI, charting, API client, HTML/CSS/JS",
+      "owns": [
+        "frontend/index.html",
+        "frontend/css/styles.css",
+        "frontend/js/app.js",
+        "frontend/js/charts.js",
+        "frontend/js/api.js"
+      ],
+      "read_only_access": [
+        "backend/app/api/routes.py"
+      ]
+    }
+  }
+}
