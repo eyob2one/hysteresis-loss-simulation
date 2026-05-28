@@ -3,15 +3,6 @@ api/routes.py
 ─────────────
 All FastAPI route definitions for the Hysteresis Loss Simulation API.
 Endpoints are versioned under /api/v1/.
-
-Routes
-------
-GET  /api/v1/health                     — Liveness check
-POST /api/v1/simulate/steinmetz         — Predict core loss (Steinmetz)
-POST /api/v1/simulate/bertotti          — Predict loss (Bertotti separation)
-POST /api/v1/analyse/bh-curve          — Analyse BH dataset, detect knee
-POST /api/v1/analyse/hysteresis-loop   — Generate hysteresis loop points
-POST /api/v1/upload/bh-csv             — Parse uploaded CSV → BH analysis
 """
 from __future__ import annotations
 
@@ -23,6 +14,8 @@ from app.utils.formulas import (
     total_bertotti_loss,
     generate_hysteresis_loop,
     find_saturation_knee_point,
+    calculate_loop_area,
+    classify_operating_region
 )
 from app.utils.data_parser import parse_csv_to_bh_dataset, bh_dataset_to_arrays
 from app.models.hysteresis_model import BHCurveAnalyser, SteinmetzModel
@@ -63,15 +56,70 @@ class HysteresisLoopRequest(BaseModel):
     n_points:     int   = Field(200, ge=20, le=2000)
 
 
+class FitDataPoint(BaseModel):
+    frequency: float = Field(..., gt=0)
+    b_peak: float = Field(..., gt=0)
+    p_loss: float = Field(..., gt=0)
+
+
+class SteinmetzFitRequest(BaseModel):
+    data_points: list[FitDataPoint] = Field(..., min_length=3)
+
+
 # ─── Health check ─────────────────────────────────────────────────────────────
 
 @router.get("/health", status_code=status.HTTP_200_OK)
 async def health_check() -> dict:
-    """Liveness probe.  Returns 200 OK with service metadata."""
+    """Liveness probe. Returns 200 OK with service metadata."""
     return {
         "status": "ok",
         "service": "Hysteresis Loss Simulation API",
-        "version": "0.1.0",
+        "version": "1.0.0",
+    }
+
+
+# ─── Presets ──────────────────────────────────────────────────────────────────
+
+@router.get("/presets", status_code=status.HTTP_200_OK)
+async def get_presets() -> dict:
+    """Get the physical presets of different materials for classroom simulation."""
+    return {
+        "soft_ferrite": {
+            "name": "Soft Ferrite (3C90 - HF Transformer)",
+            "b_sat": 0.40,
+            "coercivity_h": 15.0,
+            "remanence_b": 0.25,
+            "k": 0.0012,
+            "alpha": 1.6,
+            "beta": 2.4,
+            "k_h": 0.0008,
+            "k_e": 2e-7,
+            "k_ex": 5e-6
+        },
+        "silicon_steel": {
+            "name": "Silicon Steel (M4 - Power Transformer)",
+            "b_sat": 1.80,
+            "coercivity_h": 50.0,
+            "remanence_b": 1.20,
+            "k": 0.015,
+            "alpha": 1.7,
+            "beta": 2.0,
+            "k_h": 0.012,
+            "k_e": 1.5e-5,
+            "k_ex": 8e-5
+        },
+        "hard_magnetic": {
+            "name": "Hard Magnetic (Alnico V - Permanent Magnet)",
+            "b_sat": 1.35,
+            "coercivity_h": 40000.0,
+            "remanence_b": 1.10,
+            "k": 0.18,
+            "alpha": 1.5,
+            "beta": 1.8,
+            "k_h": 0.15,
+            "k_e": 8e-5,
+            "k_ex": 3e-4
+        }
     }
 
 
@@ -81,7 +129,6 @@ async def health_check() -> dict:
 async def simulate_steinmetz(req: SteinmetzRequest) -> dict:
     """
     Calculate core loss using the generalised Steinmetz equation.
-    Returns loss in W/m³.
     """
     try:
         loss = steinmetz_core_loss(req.k, req.f, req.b_peak, req.alpha, req.beta)
@@ -100,7 +147,6 @@ async def simulate_steinmetz(req: SteinmetzRequest) -> dict:
 async def simulate_bertotti(req: BertottiRequest) -> dict:
     """
     Full Bertotti loss-separation model.
-    Returns hysteresis, eddy-current, excess, and total loss components.
     """
     try:
         result = total_bertotti_loss(
@@ -109,6 +155,36 @@ async def simulate_bertotti(req: BertottiRequest) -> dict:
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"loss_components_W_m3": result, "inputs": req.model_dump()}
+
+
+# ─── Steinmetz Exponent Regression Fitting ────────────────────────────────────
+
+@router.post("/fit/steinmetz")
+async def fit_steinmetz_coefficients(req: SteinmetzFitRequest) -> dict:
+    """
+    Fit Steinmetz coefficients dynamically from experimental data using Scikit-Learn.
+    """
+    import numpy as np
+    f_arr = np.array([dp.frequency for dp in req.data_points])
+    b_arr = np.array([dp.b_peak for dp in req.data_points])
+    p_arr = np.array([dp.p_loss for dp in req.data_points])
+    
+    model = SteinmetzModel()
+    try:
+        model.fit(f_arr, b_arr, p_arr)
+        coeffs = model.get_coefficients()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Steinmetz fitting failed: {str(exc)}",
+        ) from exc
+        
+    return {
+        "k": coeffs["k"],
+        "alpha": coeffs["alpha_frequency_exponent"],
+        "beta": coeffs["beta_flux_density_exponent"],
+        "message": "Ridge regression completed successfully."
+    }
 
 
 # ─── BH curve analysis ────────────────────────────────────────────────────────
@@ -130,7 +206,7 @@ async def analyse_bh_curve(req: BHCurveRequest) -> dict:
             detail="h_values and b_values must have the same length.",
         )
     if not (h > 0).all():
-        raise HTTPException(status_code=422, detail="All H values must be positive.")
+        raise HTTPException(status_code=422, detail="All H values must be positive for initial DC curve analysis.")
 
     analyser = BHCurveAnalyser()
     try:
@@ -147,7 +223,6 @@ async def analyse_bh_curve(req: BHCurveRequest) -> dict:
 async def get_hysteresis_loop(req: HysteresisLoopRequest) -> dict:
     """
     Generate a parameterised symmetric hysteresis B-H loop.
-    Returns upper and lower branch arrays for charting.
     """
     loop = generate_hysteresis_loop(
         h_max=req.h_max,
@@ -156,7 +231,14 @@ async def get_hysteresis_loop(req: HysteresisLoopRequest) -> dict:
         remanence_b=req.remanence_b,
         n_points=req.n_points,
     )
-    return {"hysteresis_loop": loop}
+    
+    # Calculate Loop Area to get dynamic Hysteresis loss
+    area = calculate_loop_area(loop["h"], loop["b_upper"], loop["b_lower"])
+    
+    return {
+        "hysteresis_loop": loop,
+        "enclosed_area_J_m3": area
+    }
 
 
 # ─── CSV upload ───────────────────────────────────────────────────────────────
@@ -170,7 +252,6 @@ async def upload_bh_csv(
 ) -> dict:
     """
     Upload a CSV file with columns [H_A_per_m, B_Tesla].
-    Parses, validates, and runs full BH curve analysis.
     """
     if not file.filename or not file.filename.endswith(".csv"):
         raise HTTPException(
