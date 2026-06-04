@@ -149,16 +149,22 @@ npm run start:backend   # Start backend API only (for testing ML features)
 ```
 hysteresis-loss-simulation/
 ├── frontend/                   # Standalone web application
-│   ├── index.html             # Main UI (no build step needed!)
+│   ├── index.html              # Main UI (no build step needed!)
 │   ├── js/
-│   │   ├── app.js             # App state & orchestration
-│   │   ├── api.js             # Backend API communication
-│   │   ├── charts.js          # Chart.js rendering
-│   │   └── mag-hyst.js        # Physics engine (offline fallback)
+│   │   ├── app.js              # App state & orchestration
+│   │   ├── api.js              # Backend API communication
+│   │   ├── charts.js           # Chart.js rendering
+│   │   └── mag-hyst.js         # Physics engine (offline fallback)
 │   └── css/
-│       ├── mag-hyst.css       # Main styles + dark/light theme
-│       └── styles.css         # Additional component styles
-│
+│   |   ├── mag-hyst.css       # Main styles + dark/light theme
+│   |   └── styles.css         # Additional component styles
+│   |___views/
+│   │   ├── data.html       #html navs
+│   │   ├── ml.html                              
+│   │   ├── script.html
+│   │   └── theory.html
+|   │   └── simulator.html
+|   
 ├── backend/                    # Python API (optional for advanced features)
 │   ├── app/
 │   │   ├── main.py           # FastAPI application entry point
@@ -246,3 +252,21 @@ In general, ML regression here replaces the tedious manual curve-fitting that en
 | Backend  | Python, FastAPI, uvicorn                           |
 | ML       | scikit-learn (LinearRegression with log transform) |
 | Runner   | Node.js + concurrently                             |
+## Tools used
+| TOOLS    |
+|----------|
+|Github for version control and CI/CD |
+|Gemini 3 Pro for coding assistant| 
+|Google ai studio for coding assistant|
+|Railway for deployment|
+
+## How to contribute
+Github: https://github.com/eyob2one/hysteresis-loss-simulation.git
+## Purpose of This project
+- For Machine project
+- For learning purposes to bridge the gap between ML and Electrical Machines Course
+## Group Members
+-Abel Tamirat
+-Abraham Tesfaye
+-Eyob Mengistu
+-Henok Gizaw

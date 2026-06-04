@@ -1,0 +1,104 @@
+<article class="panel telegraph-article">
+  <header class="telegraph-header">
+    <span class="telegraph-meta">MAG-HYSTERSIS SIMULATION • Our Group Simulation project</span>
+    <h1>Theoretical Foundations & Definitions</h1>
+    <p class="telegraph-lead">A comprehensive reference guide to magnetic core behavior, parameters, and loss separation models built from the ground up.</p>
+    <div class="telegraph-divider"></div>
+  </header>
+
+  <div class="telegraph-body">
+    <h2>1. Ground-Up Microscopic Foundations</h2>
+    
+    <div class="definition-item">
+      <span class="def-term">Magnetic Dipoles</span>
+      <p>Microscopic atomic-level magnetic fields created by electron spins. In ferromagnetic materials, quantum forces cause adjacent dipoles to snap into parallel alignment.</p>
+    </div>
+
+    <div class="definition-item">
+      <span class="def-term">Magnetic Domains</span>
+      <p>Microscopic clustered regions where all internal dipoles point the same way. In an unmagnetized core, these domains point in random directions, canceling each other out.</p>
+    </div>
+
+    <div class="definition-item">
+      <span class="def-term">Bloch Walls</span>
+      <p>The narrow transition boundary zones that separate adjacent magnetic domains pointing in different directions.</p>
+    </div>
+
+    <h2>2. Core Magnetization Definitions</h2>
+    
+    <div class="definition-item">
+      <span class="def-term">Magnetic Flux Density (B)</span>
+      <p>Measured in <strong>Teslas (T)</strong>. It quantifies the strength and concentration of the magnetic field induced inside the material. One Tesla is equal to one Weber per square meter.</p>
+    </div>
+
+    <div class="definition-item">
+      <span class="def-term">Magnetizing Field Strength (H)</span>
+      <p>Measured in <strong>Ampere-turns per meter (A/m)</strong>. It is the external magnetizing force applied to the material, usually driven by current passing through a wire winding around the core:</p>
+      <code class="formula">H = (N * I) / l</code>
+    </div>
+
+    <div class="definition-item">
+      <span class="def-term">Saturation Flux Density (B<sub>sat</sub>)</span>
+      <p>The maximum limit of flux density that a core can hold. Beyond B<sub>sat</sub>, increasing the external field H yields no significant increase in magnetization, as all internal magnetic domains are already fully aligned.</p>
+    </div>
+
+    <div class="definition-item">
+      <span class="def-term">Remanence (B<sub>r</sub>)</span>
+      <p>The remaining magnetic flux density left in the core when the external magnetizing field H is brought back to zero. It represents the "magnetic memory" or permanent magnetization of the material.</p>
+    </div>
+
+    <div class="definition-item">
+      <span class="def-term">Coercivity (H<sub>c</sub>)</span>
+      <p>The reverse magnetic field strength required to completely demagnetize the material, bringing its flux density B back to zero. A material with low H<sub>c</sub> is "soft" (easy to magnetize/demagnetize), while high H<sub>c</sub> indicates a "hard" permanent magnet.</p>
+    </div>
+
+    <div class="definition-item">
+      <span class="def-term">Peak Applied Field (H<sub>max</sub>)</span>
+      <p>The maximum amplitude of the magnetizing field strength applied during the alternating current (AC) cycle.</p>
+    </div>
+
+    <h2>3. Hysteresis Loop & Loss Mechanisms</h2>
+    <p>Because moving domain walls pin irreversibly against physical material defects, the magnetization path demagnetizes along a separate lag path rather than a straight line.</p>
+    
+    <div class="definition-item">
+      <span class="def-term">Hysteresis Loop Area</span>
+      <p>Ferromagnetic materials do not magnetize and demagnetize along the same path. This lag creates a closed B-H loop. The area enclosed by the loop represents the energy dissipated as heat per unit volume per cycle (measured in <strong>Joules per cubic meter, J/m³</strong>).</p>
+    </div>
+
+    <div class="definition-item">
+      <span class="def-term">Total Core Loss Power</span>
+      <p>The rate of energy loss in the core. For an active volume V<sub>core</sub> (in cm³) and frequency f, the power loss is computed as:
+         <code class="formula">P<sub>loss</sub> = Loop Area × f × V<sub>core</sub> × 10⁻⁶</code>
+      </p>
+    </div>
+
+    <h2>4. AC Loss Separation (Bertotti Model)</h2>
+    <p>Core losses increase rapidly with frequency. Under the Bertotti model, the total power loss density is split into three physical components:</p>
+
+    <div class="definition-item">
+      <span class="def-term">Hysteresis Loss (P<sub>h</sub>)</span>
+      <p>Caused by microscopic friction during domain wall movements. It scales linearly with frequency: 
+         <code class="formula">P<sub>h</sub> = W<sub>cycle</sub> × f</code>
+      </p>
+    </div>
+
+    <div class="definition-item">
+      <span class="def-term">Eddy Current Loss (P<sub>e</sub>)</span>
+      <p>Caused by circulating electrical currents induced inside conductive core materials by the alternating magnetic field. It scales quadratically with frequency:
+         <code class="formula">P<sub>e</sub> = k<sub>e</sub> × f² × B<sub>peak</sub>²</code>
+      </p>
+    </div>
+
+    <div class="definition-item">
+      <span class="def-term">Excess Loss (P<sub>ex</sub>)</span>
+      <p>Arises from the dynamic, non-uniform motion of magnetic domains under high frequencies. It scales by the 1.5 power of frequency:
+         <code class="formula">P<sub>ex</sub> = k<sub>ex</sub> × f<sup>1.5</sup> × B<sub>peak</sub><sup>1.5</sup></code>
+      </p>
+    </div>
+
+    <h2>5. Empirical Steinmetz Fit</h2>
+    <p>The Steinmetz equation is an empirical model used by electrical engineers to quickly estimate core loss density based on test data.</p>
+    <code class="formula block">P<sub>loss</sub> = k × f<sup>α</sup> × B<sub>peak</sub><sup>β</sup></code>
+    <p>Where k is the Steinmetz coefficient, α is the frequency exponent, and β is the flux density exponent. The <strong>Steinmetz ML Fit</strong> tab runs a regression analysis over custom test data points to compute these exponents for any core material.</p>
+  </div>
+</article>

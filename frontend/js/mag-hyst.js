@@ -278,7 +278,9 @@
       button.addEventListener("click", () => switchView(button.dataset.view));
     });
 
-    $("theme-toggle").addEventListener("click", toggleTheme);
+    document.querySelectorAll(".theme-toggle").forEach((btn) => {
+      btn.addEventListener("click", toggleTheme);
+    });
     $("material-select").addEventListener("change", (event) => applyPreset(event.target.value));
     $("reset-btn").addEventListener("click", () => applyPreset("silicon_steel_m4"));
     $("soft-scale-btn").addEventListener("click", () => setCoercivityScale(false));
@@ -332,6 +334,17 @@
     $("view-title").textContent = VIEW_META[view].title;
     $("view-subtitle").textContent = VIEW_META[view].subtitle;
     if (view === "script") updatePythonScript();
+
+    // Redraw and resize elements when switching view to handle display toggle bounds
+    if (view === "simulator") {
+      requestAnimationFrame(() => {
+        if (state.chart) state.chart.resize();
+        else redrawMainChart();
+        if (state.breakdownChart) state.breakdownChart.resize();
+        else redrawBreakdownChart();
+        drawDomains(state.lastFrame || 0);
+      });
+    }
   }
 
   function toggleTheme() {
@@ -345,12 +358,15 @@
   }
 
   function updateThemeIcon() {
-    const btn = $("theme-toggle");
-    const icon = btn.querySelector("[data-lucide]");
-    if (icon) {
-      icon.setAttribute("data-lucide", state.theme === "dark" ? "sun" : "moon");
-      refreshIcons();
-    }
+    document.querySelectorAll(".theme-toggle").forEach((btn) => {
+      const existingIcon = btn.querySelector("[data-lucide]") || btn.querySelector("svg");
+      if (existingIcon) {
+        const newIcon = document.createElement("i");
+        newIcon.setAttribute("data-lucide", state.theme === "dark" ? "sun" : "moon");
+        existingIcon.replaceWith(newIcon);
+      }
+    });
+    refreshIcons();
   }
 
   function applyPreset(key) {
@@ -478,10 +494,14 @@
   function updateTextReadouts() {
     const p = state.params;
     const m = state.metrics;
-    $("sidebar-material").textContent = p.materialName;
-    $("header-material").textContent = p.materialName;
-    $("sidebar-loss").textContent = `${m.totalPowerLoss.toFixed(4)} W`;
-    $("header-area").textContent = `${m.loopArea.toFixed(1)} J/m3`;
+    const sidebarMat = $("sidebar-material");
+    if (sidebarMat) sidebarMat.textContent = p.materialName;
+    const headerMat = $("header-material");
+    if (headerMat) headerMat.textContent = p.materialName;
+    const sidebarLoss = $("sidebar-loss");
+    if (sidebarLoss) sidebarLoss.textContent = `${m.totalPowerLoss.toFixed(4)} W`;
+    const headerArea = $("header-area");
+    if (headerArea) headerArea.textContent = `${m.loopArea.toFixed(1)} J/m3`;
     $("metric-bs").textContent = m.B_sat.toFixed(2);
     $("metric-br").textContent = m.B_r.toFixed(2);
     $("metric-hc").textContent = formatCompact(m.H_c);
@@ -943,7 +963,8 @@
 
   function renderHistory() {
     const body = $("history-body");
-    $("dataset-badge").textContent = `${state.history.length} RUNS`;
+    const badge = $("dataset-badge");
+    if (badge) badge.textContent = `${state.history.length} RUNS`;
     if (!state.history.length) {
       body.innerHTML = `<tr><td colspan="6">No snapshots logged.</td></tr>`;
       return;
@@ -1220,8 +1241,8 @@
     }
 
     $("fit-k").textContent = coeffs.k.toExponential(4);
-    $("fit-alpha").textContent = coeffs.alpha.toFixed(3);
-    $("fit-beta").textContent = coeffs.beta.toFixed(3);
+    $("fit-alpha").textContent = coeffs.alpha.toFixed(4);
+    $("fit-beta").textContent = coeffs.beta.toFixed(4);
     $("fit-status").textContent = `Fit complete using ${coeffs.source}.`;
   }
 
@@ -1283,7 +1304,8 @@
 
   function updateApiStatus() {
     const text = state.apiOnline ? "ACTIVE_8000" : "LOCAL";
-    $("api-status-sidebar").textContent = text;
+    const apiSidebar = $("api-status-sidebar");
+    if (apiSidebar) apiSidebar.textContent = text;
     const mobile = $("api-status-mobile");
     mobile.querySelector("span:last-child").textContent = state.apiOnline ? "ONLINE" : "LOCAL";
     const dot = mobile.querySelector(".status-dot");
@@ -1497,5 +1519,26 @@ plt.show()
     return trimmed;
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  async function loadViewsAndInit() {
+    const views = document.querySelectorAll(".view[data-src]");
+    const promises = Array.from(views).map(async (view) => {
+      const src = view.getAttribute("data-src");
+      try {
+        const response = await fetch(src);
+        if (!response.ok) throw new Error(`Failed to load ${src}`);
+        view.innerHTML = await response.text();
+      } catch (err) {
+        console.error(err);
+        view.innerHTML = `<div class="error-panel" style="padding: 20px; color: var(--danger);">Error loading view content.</div>`;
+      }
+    });
+    await Promise.all(promises);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        init();
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", loadViewsAndInit);
 })();

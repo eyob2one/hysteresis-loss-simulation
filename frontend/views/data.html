@@ -1,0 +1,51 @@
+<div class="two-column">
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <h3>Machine Dataset Import</h3>
+        <p>Overlay external H-B measurement points on the active simulation</p>
+      </div>
+    </div>
+    <label class="upload-target" for="csv-upload">
+      <input id="csv-upload" type="file" accept=".csv,.txt,.dat" />
+      <i data-lucide="file-up"></i>
+      <strong id="upload-title">Choose H-B CSV file</strong>
+      <span>Headers can include H, Field, B, Flux, or use two numeric columns.</span>
+    </label>
+    <div class="button-row">
+      <button class="text-button" id="clear-csv-btn" type="button">
+        <i data-lucide="x-circle"></i>
+        <span>Clear Overlay</span>
+      </button>
+      <button class="text-button accent" id="export-history-btn" type="button">
+        <i data-lucide="file-spreadsheet"></i>
+        <span>Export Snapshots</span>
+      </button>
+    </div>
+    <p class="status-message" id="csv-status">No uploaded dataset mounted.</p>
+  </article>
+
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <h3>Telemetry Snapshots</h3>
+        <p>Saved runs for comparison and report export</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dataset</th>
+            <th>Source</th>
+            <th>Bs</th>
+            <th>Br</th>
+            <th>Hc</th>
+            <th>Loss</th>
+          </tr>
+        </thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+  </article>
+</div>

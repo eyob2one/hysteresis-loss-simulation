@@ -1,0 +1,61 @@
+<article class="panel">
+  <div class="panel-header">
+    <div>
+      <h3>Dynamic Steinmetz Regression</h3>
+      <p>Fits k, alpha, and beta from measured frequency, B_peak, and loss density</p>
+    </div>
+    <div class="button-row">
+      <button class="text-button" id="seed-fit-btn" type="button">
+        <i data-lucide="refresh-cw"></i>
+        <span>Seed From Material</span>
+      </button>
+      <button class="text-button accent" id="run-fit-btn" type="button">
+        <i data-lucide="brain"></i>
+        <span>Run Fit</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="fit-layout">
+    <div class="fit-inputs">
+      <label>Frequency Hz<input id="fit-f" class="field-control" type="number" value="400" min="1" step="1" /></label>
+      <label>B_peak T<input id="fit-b" class="field-control" type="number" value="1.20" min="0.01" step="0.01" /></label>
+      <label>Loss W/m3<input id="fit-p" class="field-control" type="number" value="850" min="0.01" step="1" /></label>
+      <button class="text-button" id="add-fit-row-btn" type="button">
+        <i data-lucide="plus"></i>
+        <span>Add Row</span>
+      </button>
+    </div>
+
+    <div class="coeff-grid">
+      <div class="metric-tile cyan">
+        <span>k coefficient</span>
+        <strong id="fit-k"><span class="pending-text">Pending</span></strong>
+      </div>
+      <div class="metric-tile magenta">
+        <span>alpha exponent</span>
+        <strong id="fit-alpha"><span class="pending-text">Pending</span></strong>
+      </div>
+      <div class="metric-tile amber">
+        <span>beta exponent</span>
+        <strong id="fit-beta"><span class="pending-text">Pending</span></strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Frequency</th>
+          <th>B_peak</th>
+          <th>Loss</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="fit-table-body"></tbody>
+    </table>
+  </div>
+  <p class="status-message" id="fit-status">Awaiting regression run.</p>
+</article>

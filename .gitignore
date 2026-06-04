@@ -38,3 +38,4 @@ check_locks.py
 # Backend data cache
 backend/data/
 repo/
+env/
