@@ -1,5 +1,9 @@
 # MagSim Pro — Hysteresis Loss Simulator
-
+<div align="center">
+  <img src="assets/demo.gif" width="560"/>
+</div>
+<br/>
+<br/>
 An interactive web simulation of magnetic hysteresis loss in ferromagnetic cores. Pick a material, move the sliders, and watch the B-H loop come alive.
 
 ![Hysteresis Loop](https://img.shields.io/badge/Physics-Electromagnetics-blue) ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-green) ![Vanilla JS](https://img.shields.io/badge/Frontend-Vanilla%20JS-yellow)
